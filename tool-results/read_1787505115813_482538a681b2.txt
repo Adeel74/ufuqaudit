@@ -1,0 +1,801 @@
+     1→"use client";
+     2→
+     3→import * as React from "react";
+     4→import { ViewHeader, StatCard } from "@/components/dashboard/shared";
+     5→import { Card } from "@/components/ui/card";
+     6→import { Button } from "@/components/ui/button";
+     7→import { Input } from "@/components/ui/input";
+     8→import { Label } from "@/components/ui/label";
+     9→import { Textarea } from "@/components/ui/textarea";
+    10→import { Badge } from "@/components/ui/badge";
+    11→import { Switch } from "@/components/ui/switch";
+    12→import { Separator } from "@/components/ui/separator";
+    13→import {
+    14→  Select,
+    15→  SelectContent,
+    16→  SelectItem,
+    17→  SelectTrigger,
+    18→  SelectValue,
+    19→} from "@/components/ui/select";
+    20→import {
+    21→  Dialog,
+    22→  DialogClose,
+    23→  DialogContent,
+    24→  DialogFooter,
+    25→  DialogHeader,
+    26→  DialogTitle,
+    27→} from "@/components/ui/dialog";
+    28→import {
+    29→  AlertDialog,
+    30→  AlertDialogAction,
+    31→  AlertDialogCancel,
+    32→  AlertDialogContent,
+    33→  AlertDialogDescription,
+    34→  AlertDialogFooter,
+    35→  AlertDialogHeader,
+    36→  AlertDialogTitle,
+    37→} from "@/components/ui/alert-dialog";
+    38→import { toast } from "sonner";
+    39→import {
+    40→  Megaphone, RefreshCw, Plus, Pencil, Trash2, Square, Loader2,
+    41→  Eye, Mail, Bell, Info, CheckCircle2, AlertTriangle, Wrench,
+    42→} from "lucide-react";
+    43→import {
+    44→  SCROLLBAR_CLS, SkeletonRows, EmptyState, EMERALD_BTN,
+    45→  formatDateLong, formatCompact,
+    46→} from "../admin-helpers";
+    47→
+    48→// ----- API types -----
+    49→type AnnouncementType = "info" | "success" | "warning" | "maintenance";
+    50→type AnnouncementStatus = "active" | "scheduled" | "ended";
+    51→type Audience = "all" | "free" | "starter" | "pro" | "agency" | "trial";
+    52→
+    53→interface Channels {
+    54→  dashboard: boolean;
+    55→  email: boolean;
+    56→  popup: boolean;
+    57→}
+    58→
+    59→interface Announcement {
+    60→  id: string;
+    61→  title: string;
+    62→  description: string;
+    63→  type: AnnouncementType;
+    64→  audience: Audience;
+    65→  channels: Channels;
+    66→  status: AnnouncementStatus;
+    67→  startDate: string;
+    68→  endDate: string;
+    69→  ctaLabel: string;
+    70→  ctaHref: string;
+    71→  createdAt: string;
+    72→  views: number;
+    73→  clicks: number;
+    74→}
+    75→
+    76→interface AnnouncementStats {
+    77→  total: number;
+    78→  active: number;
+    79→  scheduled: number;
+    80→  ended: number;
+    81→  totalViews: number;
+    82→  totalClicks: number;
+    83→}
+    84→
+    85→interface AnnouncementResponse {
+    86→  announcements: Announcement[];
+    87→  stats: AnnouncementStats;
+    88→}
+    89→
+    90→const TYPE_BADGE: Record<AnnouncementType, string> = {
+    91→  info: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800",
+    92→  success: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800",
+    93→  warning: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800",
+    94→  maintenance: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800",
+    95→};
+    96→
+    97→const STATUS_BADGE: Record<AnnouncementStatus, string> = {
+    98→  active: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800",
+    99→  scheduled: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800",
+   100→  ended: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-700",
+   101→};
+   102→
+   103→const TYPE_ICON: Record<AnnouncementType, React.ComponentType<{ className?: string }>> = {
+   104→  info: Info,
+   105→  success: CheckCircle2,
+   106→  warning: AlertTriangle,
+   107→  maintenance: Wrench,
+   108→};
+   109→
+   110→const TYPE_COLOR_HEX: Record<AnnouncementType, string> = {
+   111→  info: "#0ea5e9",
+   112→  success: "#10b981",
+   113→  warning: "#f59e0b",
+   114→  maintenance: "#f97316",
+   115→};
+   116→
+   117→const AUDIENCE_BADGE: Record<Audience, string> = {
+   118→  all: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-700",
+   119→  free: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-700",
+   120→  starter: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800",
+   121→  pro: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800",
+   122→  agency: "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-800",
+   123→  trial: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800",
+   124→};
+   125→
+   126→function toLocalInput(iso: string): string {
+   127→  if (!iso) return "";
+   128→  const d = new Date(iso);
+   129→  if (isNaN(d.getTime())) return "";
+   130→  const tz = d.getTimezoneOffset() * 60000;
+   131→  return new Date(d.getTime() - tz).toISOString().slice(0, 16);
+   132→}
+   133→
+   134→export function AdminAnnouncementsSection({ refreshKey }: { refreshKey: number }) {
+   135→  const [data, setData] = React.useState<AnnouncementResponse | null>(null);
+   136→  const [loading, setLoading] = React.useState(true);
+   137→  const [createOpen, setCreateOpen] = React.useState(false);
+   138→  const [editTarget, setEditTarget] = React.useState<Announcement | null>(null);
+   139→  const [toDelete, setToDelete] = React.useState<Announcement | null>(null);
+   140→  const [endNow, setEndNow] = React.useState<Announcement | null>(null);
+   141→  const [deleting, setDeleting] = React.useState(false);
+   142→  const [ending, setEnding] = React.useState(false);
+   143→
+   144→  const load = React.useCallback(async () => {
+   145→    setLoading(true);
+   146→    try {
+   147→      const r = await fetch("/api/admin/announcements").then((r) => r.json() as Promise<AnnouncementResponse>);
+   148→      setData(r);
+   149→    } catch (e) {
+   150→      console.error(e);
+   151→      toast.error("Failed to load announcements");
+   152→    } finally {
+   153→      setLoading(false);
+   154→    }
+   155→  }, []);
+   156→
+   157→  React.useEffect(() => {
+   158→    void load();
+   159→  }, [load, refreshKey]);
+   160→
+   161→  const stats = data?.stats;
+   162→  const announcements = data?.announcements ?? [];
+   163→
+   164→  function addAnnouncement(a: Announcement) {
+   165→    setData((prev) => (prev ? { ...prev, announcements: [a, ...prev.announcements] } : prev));
+   166→  }
+   167→
+   168→  function patchAnnouncement(id: string, patch: Partial<Announcement>) {
+   169→    setData((prev) =>
+   170→      prev
+   171→        ? { ...prev, announcements: prev.announcements.map((a) => (a.id === id ? { ...a, ...patch } : a)) }
+   172→        : prev,
+   173→    );
+   174→  }
+   175→
+   176→  async function deleteAnn() {
+   177→    if (!toDelete) return;
+   178→    setDeleting(true);
+   179→    await new Promise((r) => setTimeout(r, 400));
+   180→    setData((prev) =>
+   181→      prev ? { ...prev, announcements: prev.announcements.filter((a) => a.id !== toDelete.id) } : prev,
+   182→    );
+   183→    toast.success(`Deleted "${toDelete.title}"`);
+   184→    setToDelete(null);
+   185→    setDeleting(false);
+   186→  }
+   187→
+   188→  async function endNowConfirm() {
+   189→    if (!endNow) return;
+   190→    setEnding(true);
+   191→    await new Promise((r) => setTimeout(r, 300));
+   192→    patchAnnouncement(endNow.id, {
+   193→      status: "ended",
+   194→      endDate: new Date().toISOString(),
+   195→    });
+   196→    toast.success(`Ended "${endNow.title}"`);
+   197→    setEndNow(null);
+   198→    setEnding(false);
+   199→  }
+   200→
+   201→  // The first active announcement for the preview card
+   202→  const previewTarget = announcements.find((a) => a.status === "active") ?? announcements[0] ?? null;
+   203→
+   204→  return (
+   205→    <div className="space-y-6">
+   206→      <ViewHeader
+   207→        title="Announcements"
+   208→        subtitle="Platform-wide banners & notifications"
+   209→        icon={Megaphone}
+   210→        actions={
+   211→          <>
+   212→            <Button variant="outline" size="sm" onClick={() => load()}>
+   213→              <RefreshCw className="w-3.5 h-3.5 mr-1" /> Refresh
+   214→            </Button>
+   215→            <Button size="sm" className={EMERALD_BTN} onClick={() => { setEditTarget(null); setCreateOpen(true); }}>
+   216→              <Plus className="w-3.5 h-3.5 mr-1" /> Create announcement
+   217→            </Button>
+   218→          </>
+   219→        }
+   220→      />
+   221→
+   222→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+   223→        <StatCard label="Total" value={stats?.total ?? 0} icon={Megaphone} color="#10b981" />
+   224→        <StatCard label="Active" value={stats?.active ?? 0} icon={Bell} color="#14b8a6" />
+   225→        <StatCard label="Scheduled" value={stats?.scheduled ?? 0} icon={RefreshCw} color="#f59e0b" />
+   226→        <StatCard label="Total Views" value={formatCompact(stats?.totalViews ?? 0)} icon={Eye} color="#8b5cf6" />
+   227→      </div>
+   228→
+   229→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+   230→        {/* Announcements list */}
+   231→        <div className="lg:col-span-2">
+   232→          <Card className="p-5">
+   233→            <h3 className="font-semibold flex items-center gap-2 mb-3">
+   234→              <Megaphone className="w-4 h-4 text-emerald-600" /> Announcements
+   235→              <Badge variant="secondary" className="ml-1">{announcements.length}</Badge>
+   236→            </h3>
+   237→            <div className={`-mx-2 px-2 ${SCROLLBAR_CLS} max-h-[60vh] space-y-3`}>
+   238→              {loading ? (
+   239→                <SkeletonRows rows={3} cols={2} />
+   240→              ) : announcements.length === 0 ? (
+   241→                <EmptyState msg="No announcements yet" icon={Megaphone} />
+   242→              ) : (
+   243→                announcements.map((a) => {
+   244→                  const TIcon = TYPE_ICON[a.type];
+   245→                  const tColor = TYPE_COLOR_HEX[a.type];
+   246→                  const ctr = a.views > 0 ? Math.round((a.clicks / a.views) * 1000) / 10 : 0;
+   247→                  return (
+   248→                    <div
+   249→                      key={a.id}
+   250→                      className="rounded-lg border bg-card p-4 hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors"
+   251→                    >
+   252→                      <div className="flex items-start justify-between gap-3 mb-2">
+   253→                        <div className="flex items-start gap-2.5 min-w-0">
+   254→                          <div
+   255→                            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+   256→                            style={{ backgroundColor: `${tColor}15`, color: tColor }}
+   257→                          >
+   258→                            <TIcon className="w-4 h-4" />
+   259→                          </div>
+   260→                          <div className="min-w-0">
+   261→                            <h4 className="font-semibold text-sm truncate" title={a.title}>
+   262→                              {a.title}
+   263→                            </h4>
+   264→                            <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+   265→                              {a.description}
+   266→                            </p>
+   267→                          </div>
+   268→                        </div>
+   269→                        <div className="flex items-center gap-1.5 shrink-0">
+   270→                          <Badge variant="outline" className={`capitalize text-[10px] ${TYPE_BADGE[a.type]}`}>
+   271→                            {a.type}
+   272→                          </Badge>
+   273→                          <Badge variant="outline" className={`capitalize text-[10px] ${STATUS_BADGE[a.status]}`}>
+   274→                            {a.status}
+   275→                          </Badge>
+   276→                        </div>
+   277→                      </div>
+   278→
+   279→                      <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground mb-2">
+   280→                        <Badge variant="outline" className={`capitalize text-[10px] ${AUDIENCE_BADGE[a.audience]}`}>
+   281→                          {a.audience}
+   282→                        </Badge>
+   283→                        <span className="mx-0.5">·</span>
+   284→                        {a.channels.dashboard && (
+   285→                          <Badge variant="outline" className="text-[10px] bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900/60 dark:text-slate-400 dark:border-slate-700">
+   286→                            <Eye className="w-2.5 h-2.5 mr-0.5" /> Dashboard
+   287→                          </Badge>
+   288→                        )}
+   289→                        {a.channels.email && (
+   290→                          <Badge variant="outline" className="text-[10px] bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900/60 dark:text-slate-400 dark:border-slate-700">
+   291→                            <Mail className="w-2.5 h-2.5 mr-0.5" /> Email
+   292→                          </Badge>
+   293→                        )}
+   294→                        {a.channels.popup && (
+   295→                          <Badge variant="outline" className="text-[10px] bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900/60 dark:text-slate-400 dark:border-slate-700">
+   296→                            <Bell className="w-2.5 h-2.5 mr-0.5" /> Popup
+   297→                          </Badge>
+   298→                        )}
+   299→                      </div>
+   300→
+   301→                      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mb-3">
+   302→                        <span>
+   303→                          {formatDateLong(a.startDate)} → {formatDateLong(a.endDate)}
+   304→                        </span>
+   305→                        {a.ctaLabel && a.ctaHref && (
+   306→                          <span className="text-emerald-700 dark:text-emerald-400">
+   307→                            CTA: <span className="font-medium">{a.ctaLabel}</span> → <span className="font-mono">{a.ctaHref}</span>
+   308→                          </span>
+   309→                        )}
+   310→                      </div>
+   311→
+   312→                      <div className="flex flex-wrap items-center justify-between gap-3">
+   313→                        <div className="flex items-center gap-3 text-xs">
+   314→                          <span className="text-muted-foreground">
+   315→                            <span className="font-semibold text-foreground tabular-nums">{formatCompact(a.views)}</span> views
+   316→                          </span>
+   317→                          <span className="text-muted-foreground">
+   318→                            <span className="font-semibold text-foreground tabular-nums">{formatCompact(a.clicks)}</span> clicks
+   319→                          </span>
+   320→                          <span className="text-emerald-700 dark:text-emerald-400 font-medium tabular-nums">
+   321→                            {ctr}% CTR
+   322→                          </span>
+   323→                        </div>
+   324→                        <div className="flex items-center gap-1">
+   325→                          <Button
+   326→                            size="sm"
+   327→                            variant="ghost"
+   328→                            className="h-7"
+   329→                            onClick={() => { setEditTarget(a); setCreateOpen(true); }}
+   330→                            title="Edit"
+   331→                          >
+   332→                            <Pencil className="w-3.5 h-3.5" />
+   333→                          </Button>
+   334→                          {a.status === "active" && (
+   335→                            <Button
+   336→                              size="sm"
+   337→                              variant="ghost"
+   338→                              className="h-7 text-amber-600 hover:text-amber-700"
+   339→                              onClick={() => setEndNow(a)}
+   340→                              title="End now"
+   341→                            >
+   342→                              <Square className="w-3.5 h-3.5" />
+   343→                            </Button>
+   344→                          )}
+   345→                          <Button
+   346→                            size="sm"
+   347→                            variant="ghost"
+   348→                            className="h-7 text-red-600 hover:text-red-700"
+   349→                            onClick={() => setToDelete(a)}
+   350→                            title="Delete"
+   351→                          >
+   352→                            <Trash2 className="w-3.5 h-3.5" />
+   353→                          </Button>
+   354→                        </div>
+   355→                      </div>
+   356→                    </div>
+   357→                  );
+   358→                })
+   359→              )}
+   360→            </div>
+   361→          </Card>
+   362→        </div>
+   363→
+   364→        {/* Preview sidebar */}
+   365→        <div className="lg:sticky lg:top-2 lg:self-start">
+   366→          <Card className="p-5">
+   367→            <h3 className="font-semibold flex items-center gap-2 mb-3">
+   368→              <Eye className="w-4 h-4 text-emerald-600" /> Live Preview
+   369→            </h3>
+   370→            <p className="text-xs text-muted-foreground mb-4">
+   371→              How the active announcement appears in the user dashboard.
+   372→            </p>
+   373→            {previewTarget ? (
+   374→              <BannerPreview announcement={previewTarget} />
+   375→            ) : (
+   376→              <EmptyState msg="No announcement to preview" icon={Eye} />
+   377→            )}
+   378→          </Card>
+   379→        </div>
+   380→      </div>
+   381→
+   382→      <AnnouncementDialog
+   383→        open={createOpen}
+   384→        onOpenChange={(o) => { if (!o) { setCreateOpen(false); setEditTarget(null); } }}
+   385→        existing={editTarget}
+   386→        onCreated={(a) => {
+   387→          if (editTarget) {
+   388→            patchAnnouncement(editTarget.id, a);
+   389→            toast.success("Announcement updated (demo)");
+   390→          } else {
+   391→            addAnnouncement(a);
+   392→            toast.success("Announcement scheduled (demo)");
+   393→          }
+   394→          setCreateOpen(false);
+   395→          setEditTarget(null);
+   396→        }}
+   397→      />
+   398→
+   399→      <AlertDialog open={!!toDelete} onOpenChange={(o) => { if (!o) setToDelete(null); }}>
+   400→        <AlertDialogContent>
+   401→          <AlertDialogHeader>
+   402→            <AlertDialogTitle>Delete announcement?</AlertDialogTitle>
+   403→            <AlertDialogDescription>
+   404→              This will permanently delete{" "}
+   405→              <span className="font-medium text-foreground">{toDelete?.title}</span>.
+   406→              This action cannot be undone.
+   407→            </AlertDialogDescription>
+   408→          </AlertDialogHeader>
+   409→          <AlertDialogFooter>
+   410→            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+   411→            <AlertDialogAction
+   412→              onClick={(e) => {
+   413→                e.preventDefault();
+   414→                void deleteAnn();
+   415→              }}
+   416→              disabled={deleting}
+   417→              className="bg-red-600 hover:bg-red-700 text-white"
+   418→            >
+   419→              {deleting && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+   420→              Delete
+   421→            </AlertDialogAction>
+   422→          </AlertDialogFooter>
+   423→        </AlertDialogContent>
+   424→      </AlertDialog>
+   425→
+   426→      <AlertDialog open={!!endNow} onOpenChange={(o) => { if (!o) setEndNow(null); }}>
+   427→        <AlertDialogContent>
+   428→          <AlertDialogHeader>
+   429→            <AlertDialogTitle>End announcement now?</AlertDialogTitle>
+   430→            <AlertDialogDescription>
+   431→              <span className="font-medium text-foreground">{endNow?.title}</span> will be immediately marked as ended.
+   432→              Users will no longer see the banner.
+   433→            </AlertDialogDescription>
+   434→          </AlertDialogHeader>
+   435→          <AlertDialogFooter>
+   436→            <AlertDialogCancel disabled={ending}>Keep active</AlertDialogCancel>
+   437→            <AlertDialogAction
+   438→              onClick={(e) => {
+   439→                e.preventDefault();
+   440→                void endNowConfirm();
+   441→              }}
+   442→              disabled={ending}
+   443→              className="bg-amber-600 hover:bg-amber-700 text-white"
+   444→            >
+   445→              {ending && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+   446→              End now
+   447→            </AlertDialogAction>
+   448→          </AlertDialogFooter>
+   449→        </AlertDialogContent>
+   450→      </AlertDialog>
+   451→    </div>
+   452→  );
+   453→}
+   454→
+   455→function BannerPreview({ announcement }: { announcement: Announcement }) {
+   456→  const TIcon = TYPE_ICON[announcement.type];
+   457→  const tColor = TYPE_COLOR_HEX[announcement.type];
+   458→  return (
+   459→    <div
+   460→      className="rounded-lg border p-4"
+   461→      style={{
+   462→        backgroundColor: `${tColor}10`,
+   463→        borderColor: `${tColor}40`,
+   464→      }}
+   465→    >
+   466→      <div className="flex items-start gap-3">
+   467→        <div
+   468→          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+   469→          style={{ backgroundColor: `${tColor}25`, color: tColor }}
+   470→        >
+   471→          <TIcon className="w-4.5 h-4.5" />
+   472→        </div>
+   473→        <div className="min-w-0 flex-1">
+   474→          <div className="font-semibold text-sm" style={{ color: tColor }}>
+   475→            {announcement.title}
+   476→          </div>
+   477→          <p className="text-xs text-foreground/80 mt-1 line-clamp-3">
+   478→            {announcement.description}
+   479→          </p>
+   480→          {announcement.ctaLabel && (
+   481→            <button
+   482→              className="mt-2 text-xs font-medium px-2.5 py-1 rounded-md text-white"
+   483→              style={{ backgroundColor: tColor }}
+   484→              onClick={() => toast.info(`CTA click → ${announcement.ctaHref}`)}
+   485→            >
+   486→              {announcement.ctaLabel}
+   487→            </button>
+   488→          )}
+   489→        </div>
+   490→      </div>
+   491→      <div className="flex items-center gap-2 mt-3 pt-3 border-t" style={{ borderColor: `${tColor}25` }}>
+   492→        <Badge variant="outline" className={`capitalize text-[10px] ${TYPE_BADGE[announcement.type]}`}>
+   493→          {announcement.type}
+   494→        </Badge>
+   495→        <Badge variant="outline" className={`capitalize text-[10px] ${AUDIENCE_BADGE[announcement.audience]}`}>
+   496→          {announcement.audience}
+   497→        </Badge>
+   498→        <span className="text-[10px] text-muted-foreground ml-auto">
+   499→          Until {formatDateLong(announcement.endDate)}
+   500→        </span>
+   501→      </div>
+   502→    </div>
+   503→  );
+   504→}
+   505→
+   506→function AnnouncementDialog({
+   507→  open,
+   508→  onOpenChange,
+   509→  onCreated,
+   510→  existing,
+   511→}: {
+   512→  open: boolean;
+   513→  onOpenChange: (o: boolean) => void;
+   514→  onCreated: (a: Announcement) => void;
+   515→  existing: Announcement | null;
+   516→}) {
+   517→  const [title, setTitle] = React.useState("");
+   518→  const [description, setDescription] = React.useState("");
+   519→  const [type, setType] = React.useState<AnnouncementType>("info");
+   520→  const [audience, setAudience] = React.useState<Audience>("all");
+   521→  const [chDashboard, setChDashboard] = React.useState(true);
+   522→  const [chEmail, setChEmail] = React.useState(false);
+   523→  const [chPopup, setChPopup] = React.useState(false);
+   524→  const [startDate, setStartDate] = React.useState("");
+   525→  const [endDate, setEndDate] = React.useState("");
+   526→  const [ctaLabel, setCtaLabel] = React.useState("");
+   527→  const [ctaHref, setCtaHref] = React.useState("");
+   528→  const [saving, setSaving] = React.useState(false);
+   529→
+   530→  React.useEffect(() => {
+   531→    if (!open) return;
+   532→    if (existing) {
+   533→      setTitle(existing.title);
+   534→      setDescription(existing.description);
+   535→      setType(existing.type);
+   536→      setAudience(existing.audience);
+   537→      setChDashboard(existing.channels.dashboard);
+   538→      setChEmail(existing.channels.email);
+   539→      setChPopup(existing.channels.popup);
+   540→      setStartDate(toLocalInput(existing.startDate));
+   541→      setEndDate(toLocalInput(existing.endDate));
+   542→      setCtaLabel(existing.ctaLabel);
+   543→      setCtaHref(existing.ctaHref);
+   544→    } else {
+   545→      setTitle("");
+   546→      setDescription("");
+   547→      setType("info");
+   548→      setAudience("all");
+   549→      setChDashboard(true);
+   550→      setChEmail(false);
+   551→      setChPopup(false);
+   552→      const now = new Date();
+   553→      const later = new Date(now.getTime() + 7 * 86400000);
+   554→      setStartDate(toLocalInput(now.toISOString()));
+   555→      setEndDate(toLocalInput(later.toISOString()));
+   556→      setCtaLabel("Learn more");
+   557→      setCtaHref("#");
+   558→    }
+   559→  }, [open, existing]);
+   560→
+   561→  async function submit() {
+   562→    if (!title.trim()) {
+   563→      toast.error("Title required");
+   564→      return;
+   565→    }
+   566→    setSaving(true);
+   567→    try {
+   568→      const body = {
+   569→        title: title.trim(),
+   570→        description: description.trim(),
+   571→        type,
+   572→        audience,
+   573→        channels: { dashboard: chDashboard, email: chEmail, popup: chPopup },
+   574→        startDate: startDate ? new Date(startDate).toISOString() : new Date().toISOString(),
+   575→        endDate: endDate ? new Date(endDate).toISOString() : new Date(Date.now() + 7 * 86400000).toISOString(),
+   576→        ctaLabel: ctaLabel.trim(),
+   577→        ctaHref: ctaHref.trim() || "#",
+   578→      };
+   579→      const res = await fetch("/api/admin/announcements", {
+   580→        method: "POST",
+   581→        headers: { "Content-Type": "application/json" },
+   582→        body: JSON.stringify(body),
+   583→      });
+   584→      let created: Announcement | null = null;
+   585→      if (res.ok) {
+   586→        const json = (await res.json()) as { announcement: Announcement };
+   587→        created = json.announcement;
+   588→      } else {
+   589→        created = {
+   590→          id: existing?.id ?? `ann_${Date.now()}`,
+   591→          ...body,
+   592→          status: "scheduled",
+   593→          createdAt: new Date().toISOString(),
+   594→          views: existing?.views ?? 0,
+   595→          clicks: existing?.clicks ?? 0,
+   596→        };
+   597→      }
+   598→      onCreated(created);
+   599→    } catch (e) {
+   600→      console.error(e);
+   601→      toast.error("Failed to save announcement");
+   602→    } finally {
+   603→      setSaving(false);
+   604→    }
+   605→  }
+   606→
+   607→  const TIcon = TYPE_ICON[type];
+   608→  const tColor = TYPE_COLOR_HEX[type];
+   609→
+   610→  return (
+   611→    <Dialog open={open} onOpenChange={onOpenChange}>
+   612→      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+   613→        <DialogHeader>
+   614→          <DialogTitle>{existing ? `Edit announcement` : "Create announcement"}</DialogTitle>
+   615→        </DialogHeader>
+   616→        <div className="grid gap-3">
+   617→          <div className="grid gap-1.5">
+   618→            <Label htmlFor="an-title">Title</Label>
+   619→            <Input
+   620→              id="an-title"
+   621→              placeholder="AEO scoring is now live!"
+   622→              value={title}
+   623→              onChange={(e) => setTitle(e.target.value)}
+   624→            />
+   625→          </div>
+   626→          <div className="grid gap-1.5">
+   627→            <Label htmlFor="an-desc">Description</Label>
+   628→            <Textarea
+   629→              id="an-desc"
+   630→              placeholder="Short message users will see in the banner."
+   631→              value={description}
+   632→              onChange={(e) => setDescription(e.target.value)}
+   633→              rows={3}
+   634→            />
+   635→          </div>
+   636→          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   637→            <div className="grid gap-1.5">
+   638→              <Label>Type</Label>
+   639→              <Select value={type} onValueChange={(v) => setType(v as AnnouncementType)}>
+   640→                <SelectTrigger className="w-full">
+   641→                  <SelectValue />
+   642→                </SelectTrigger>
+   643→                <SelectContent>
+   644→                  <SelectItem value="info">Info</SelectItem>
+   645→                  <SelectItem value="success">Success</SelectItem>
+   646→                  <SelectItem value="warning">Warning</SelectItem>
+   647→                  <SelectItem value="maintenance">Maintenance</SelectItem>
+   648→                </SelectContent>
+   649→              </Select>
+   650→            </div>
+   651→            <div className="grid gap-1.5">
+   652→              <Label>Audience</Label>
+   653→              <Select value={audience} onValueChange={(v) => setAudience(v as Audience)}>
+   654→                <SelectTrigger className="w-full">
+   655→                  <SelectValue />
+   656→                </SelectTrigger>
+   657→                <SelectContent>
+   658→                  <SelectItem value="all">All users</SelectItem>
+   659→                  <SelectItem value="free">Free</SelectItem>
+   660→                  <SelectItem value="starter">Starter</SelectItem>
+   661→                  <SelectItem value="pro">Pro</SelectItem>
+   662→                  <SelectItem value="agency">Agency</SelectItem>
+   663→                  <SelectItem value="trial">Trial</SelectItem>
+   664→                </SelectContent>
+   665→              </Select>
+   666→            </div>
+   667→          </div>
+   668→          <Separator />
+   669→          <div>
+   670→            <Label className="text-sm mb-2 block">Channels</Label>
+   671→            <div className="grid grid-cols-3 gap-2">
+   672→              <ChannelSwitch
+   673→                label="Dashboard"
+   674→                icon={Eye}
+   675→                checked={chDashboard}
+   676→                onCheckedChange={setChDashboard}
+   677→              />
+   678→              <ChannelSwitch
+   679→                label="Email"
+   680→                icon={Mail}
+   681→                checked={chEmail}
+   682→                onCheckedChange={setChEmail}
+   683→              />
+   684→              <ChannelSwitch
+   685→                label="Popup"
+   686→                icon={Bell}
+   687→                checked={chPopup}
+   688→                onCheckedChange={setChPopup}
+   689→              />
+   690→            </div>
+   691→          </div>
+   692→          <Separator />
+   693→          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   694→            <div className="grid gap-1.5">
+   695→              <Label htmlFor="an-start">Start date</Label>
+   696→              <Input
+   697→                id="an-start"
+   698→                type="datetime-local"
+   699→                value={startDate}
+   700→                onChange={(e) => setStartDate(e.target.value)}
+   701→              />
+   702→            </div>
+   703→            <div className="grid gap-1.5">
+   704→              <Label htmlFor="an-end">End date</Label>
+   705→              <Input
+   706→                id="an-end"
+   707→                type="datetime-local"
+   708→                value={endDate}
+   709→                onChange={(e) => setEndDate(e.target.value)}
+   710→              />
+   711→            </div>
+   712→          </div>
+   713→          <Separator />
+   714→          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   715→            <div className="grid gap-1.5">
+   716→              <Label htmlFor="an-cta-label">CTA label</Label>
+   717→              <Input
+   718→                id="an-cta-label"
+   719→                placeholder="Learn more"
+   720→                value={ctaLabel}
+   721→                onChange={(e) => setCtaLabel(e.target.value)}
+   722→              />
+   723→            </div>
+   724→            <div className="grid gap-1.5">
+   725→              <Label htmlFor="an-cta-href">CTA href</Label>
+   726→              <Input
+   727→                id="an-cta-href"
+   728→                placeholder="/dashboard"
+   729→                value={ctaHref}
+   730→                onChange={(e) => setCtaHref(e.target.value)}
+   731→              />
+   732→            </div>
+   733→          </div>
+   734→          <Separator />
+   735→          <div className="rounded-lg border p-3 bg-muted/30">
+   736→            <div className="text-[10px] text-muted-foreground mb-2">Live preview</div>
+   737→            <div
+   738→              className="rounded-md border p-3"
+   739→              style={{ backgroundColor: `${tColor}10`, borderColor: `${tColor}40` }}
+   740→            >
+   741→              <div className="flex items-center gap-2">
+   742→                <div
+   743→                  className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
+   744→                  style={{ backgroundColor: `${tColor}25`, color: tColor }}
+   745→                >
+   746→                  <TIcon className="w-3.5 h-3.5" />
+   747→                </div>
+   748→                <div className="font-semibold text-sm" style={{ color: tColor }}>
+   749→                  {title || "Untitled announcement"}
+   750→                </div>
+   751→              </div>
+   752→              <p className="text-xs text-foreground/80 mt-2 line-clamp-2">
+   753→                {description || "Description preview appears here."}
+   754→              </p>
+   755→              {ctaLabel && (
+   756→                <button
+   757→                  className="mt-2 text-xs font-medium px-2 py-1 rounded-md text-white"
+   758→                  style={{ backgroundColor: tColor }}
+   759→                  type="button"
+   760→                >
+   761→                  {ctaLabel}
+   762→                </button>
+   763→              )}
+   764→            </div>
+   765→          </div>
+   766→        </div>
+   767→        <DialogFooter>
+   768→          <DialogClose asChild>
+   769→            <Button variant="outline" disabled={saving}>Cancel</Button>
+   770→          </DialogClose>
+   771→          <Button onClick={submit} disabled={saving} className={EMERALD_BTN}>
+   772→            {saving && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+   773→            {existing ? "Save changes" : "Schedule announcement"}
+   774→          </Button>
+   775→        </DialogFooter>
+   776→      </DialogContent>
+   777→    </Dialog>
+   778→  );
+   779→}
+   780→
+   781→function ChannelSwitch({
+   782→  label,
+   783→  icon: Icon,
+   784→  checked,
+   785→  onCheckedChange,
+   786→}: {
+   787→  label: string;
+   788→  icon: React.ComponentType<{ className?: string }>;
+   789→  checked: boolean;
+   790→  onCheckedChange: (v: boolean) => void;
+   791→}) {
+   792→  return (
+   793→    <div className="flex items-center gap-2 p-2 rounded-lg border">
+   794→      <Switch checked={checked} onCheckedChange={onCheckedChange} id={`ch-${label}`} />
+   795→      <Label htmlFor={`ch-${label}`} className="text-xs flex items-center gap-1 cursor-pointer">
+   796→        <Icon className="w-3 h-3" /> {label}
+   797→      </Label>
+   798→    </div>
+   799→  );
+   800→}
+   801→

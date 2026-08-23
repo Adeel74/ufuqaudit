@@ -9,6 +9,7 @@ import {
   ShieldCheck, RefreshCw, LayoutDashboard, Users, Building2,
   Layers, CreditCard, DollarSign, KeyRound, FileSearch, Settings as SettingsIcon,
   ListChecks, Gauge, Brain, Server, FileText, Mail, UserPlus, Ticket, Megaphone,
+  Flag, Webhook, BarChart3, Palette, Swords, ShieldAlert,
 } from "lucide-react";
 import { AdminDashboardSection } from "./sections/admin-dashboard-section";
 import { AdminUsersSection } from "./sections/admin-users-section";
@@ -30,6 +31,12 @@ import { AdminLeadsSection } from "./sections/admin-leads-section";
 import { AdminCouponsSection } from "./sections/admin-coupons-section";
 import { AdminAffiliatesSection } from "./sections/admin-affiliates-section";
 import { AdminAnnouncementsSection } from "./sections/admin-announcements-section";
+import { AdminFeatureFlagsSection } from "./sections/admin-feature-flags-section";
+import { AdminWebhooksSection } from "./sections/admin-webhooks-section";
+import { AdminAnalyticsSection } from "./sections/admin-analytics-section";
+import { AdminWhiteLabelSection } from "./sections/admin-white-label-section";
+import { AdminCompetitorsSection } from "./sections/admin-competitors-section";
+import { AdminSecuritySection } from "./sections/admin-security-section";
 
 const TABS = [
   { value: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -52,6 +59,12 @@ const TABS = [
   { value: "coupons", label: "Coupons", icon: Ticket },
   { value: "affiliates", label: "Affiliates", icon: Users },
   { value: "announcements", label: "Announcements", icon: Megaphone },
+  { value: "feature-flags", label: "Feature Flags", icon: Flag },
+  { value: "webhooks", label: "Webhooks", icon: Webhook },
+  { value: "analytics", label: "Analytics", icon: BarChart3 },
+  { value: "white-label", label: "White Label", icon: Palette },
+  { value: "competitors", label: "Competitors", icon: Swords },
+  { value: "security", label: "Security", icon: ShieldAlert },
 ] as const;
 
 export function AdminView() {
@@ -154,6 +167,24 @@ export function AdminView() {
         </TabsContent>
         <TabsContent value="announcements" className="mt-6">
           {tab === "announcements" ? <AdminAnnouncementsSection refreshKey={refreshKey} /> : null}
+        </TabsContent>
+        <TabsContent value="feature-flags" className="mt-6">
+          {tab === "feature-flags" ? <AdminFeatureFlagsSection refreshKey={refreshKey} /> : null}
+        </TabsContent>
+        <TabsContent value="webhooks" className="mt-6">
+          {tab === "webhooks" ? <AdminWebhooksSection refreshKey={refreshKey} /> : null}
+        </TabsContent>
+        <TabsContent value="analytics" className="mt-6">
+          {tab === "analytics" ? <AdminAnalyticsSection refreshKey={refreshKey} /> : null}
+        </TabsContent>
+        <TabsContent value="white-label" className="mt-6">
+          {tab === "white-label" ? <AdminWhiteLabelSection refreshKey={refreshKey} /> : null}
+        </TabsContent>
+        <TabsContent value="competitors" className="mt-6">
+          {tab === "competitors" ? <AdminCompetitorsSection refreshKey={refreshKey} /> : null}
+        </TabsContent>
+        <TabsContent value="security" className="mt-6">
+          {tab === "security" ? <AdminSecuritySection refreshKey={refreshKey} /> : null}
         </TabsContent>
       </Tabs>
     </div>

@@ -1283,3 +1283,76 @@ Stage Summary:
 
 Phase 3 (Growth) COMPLETE. Remaining:
 - Phase 4 — Enterprise: White Label → Client Portal → Advanced API → Webhooks → Competitor Management → Advanced Analytics → Feature Flags
+
+---
+Task ID: P4
+Agent: frontend-styling-expert (phase4-admin)
+Task: Build Phase 4 Super Admin sections (Feature Flags, Webhooks, Advanced Analytics, White-Label, Competitors, Security)
+
+Work Log:
+- Read worklog.md, admin-helpers.tsx, admin-view.tsx, plus sample existing sections (admin-announcements, admin-api-keys, admin-ai-costs) for shared patterns (zebra tables, SCROLLBAR_CLS, EMERALD_BTN, format helpers, Recharts usage, lazy-mount TabsContent).
+- Created `/home/z/my-project/src/components/admin/sections/admin-feature-flags-section.tsx` — 4 StatCards (Total/Enabled/Disabled/Categories), filter bar (search + category + status), zebra table with switch toggle (POST), global default ON/OFF indicator, mini F/S/P/A plan-override badges, rollout % progress bar, Edit dialog (slider for rollout %, plan overrides, global default switch). Create flag dialog with category select + key auto-sanitizer.
+- Created `/home/z/my-project/src/components/admin/sections/admin-webhooks-section.tsx` — 4 StatCards, 2-col layout: webhooks table (left) + delivery logs (right). Logs color-coded by HTTP status (2xx emerald / 4xx amber / 5xx red). Test/Edit/Disable(AlertDialog)/Delete(AlertDialog) actions. Create webhook dialog with event checklist (18 available events), masked secret with show/hide/copy/regenerate. Collapsible Available Events reference card with descriptions.
+- Created `/home/z/my-project/src/components/admin/sections/admin-analytics-section.tsx` — 4 StatCards (Total Users/MRR/Avg Retention/Total Revenue). Recharts ComposedChart (stacked emerald newUsers + red churned areas + sky totalUsers line). Revenue ComposedChart (emerald MRR bars + red refunds + sky net line). Top-10 features horizontal BarChart with % labels. Cohort retention heatmap (red→emerald gradient cells, legend strip). Plan distribution donut PieChart with legend. Most active users + most audited sites zebra tables.
+- Created `/home/z/my-project/src/components/admin/sections/admin-white-label-section.tsx` — 4 StatCards, config cards grid (NOT table) with color swatches + logo preview + custom domain + email from + report footer + status badge + portal toggle. Branding Preview card renders a mock audit report using the selected config's primary/secondary colors (header band, score ring, category bars, footer). Create/Edit dialog with color pickers, logo file upload (data URL, 200KB cap), custom domain, email from name/address, report footer, portal switch.
+- Created `/home/z/my-project/src/components/admin/sections/admin-competitors-section.tsx` — 3 StatCards. Settings card (3 sliders: max competitors 1-10, max URLs 10-5000, crawl depth 1-200; auto-refresh days; store results switch). Comparison features card (9 checkboxes: overallScore/categoryScores/performance/technical/aeo/geo/keywordOverlap/backlinkComparison/contentGap). Plan limits zebra table with inline editable number inputs. Recent comparisons table (max-h-[40vh]) with your score badge + competitor avg badge + winner indicator (Trophy/Swords).
+- Created `/home/z/my-project/src/components/admin/sections/admin-security-section.tsx` — 5 StatCards (Failed Today / Failed 30d / Suspicious / Active Sessions / Blocked IPs). Failed logins Recharts ComposedChart (red bars + amber unique-IPs line, 30-day). Suspicious activity zebra table (max-h-[30vh]) with severity badges (critical red / high orange / medium amber) + Block IP/Investigate actions. Active sessions zebra table with Revoke → AlertDialog. Security settings card (2FA + Admin 2FA switches, session timeout, max login attempts, lockout duration, API rate limit, IP whitelist, password min length slider, password requirement switches). Admin audit log table (max-h-[30vh]) with old → new value pill rendering + module badges.
+- Modified `/home/z/my-project/src/components/admin/admin-view.tsx` — added 6 imports (Flag, Webhook, BarChart3, Palette, Swords, ShieldAlert from lucide-react) + 6 section imports + 6 entries to TABS const (after Announcements) + 6 lazy-mount TabsContent blocks. Total tab count: 20 → 26. Compact tab styling preserved (px-2.5 py-1.5 gap-1.5 text-xs whitespace-nowrap).
+- Fixed TS errors during verification:
+  • admin-security-section.tsx: renamed state `revokeSession` → `revokeTarget` + function `revokeSession` → `confirmRevokeSession` to resolve duplicate identifier.
+  • admin-webhooks-section.tsx + admin-white-label-section.tsx: rewrote `patch.status === "X" ?? w.status === "X"` (unreachable right operand) to `(patch.status ?? w.status) === "X"` (proper nullish coalescing on the patch status field).
+
+Stage Summary:
+- Files created (6):
+  • admin-feature-flags-section.tsx — 4 StatCards, filter bar, zebra flags table with switch toggle + plan-override mini badges + rollout % bar, Edit/Create dialogs with Slider + plan-override switches.
+  • admin-webhooks-section.tsx — 4 StatCards, 2-col layout (webhooks table + delivery logs), HTTP-status color-coded log badges, event checklist dialog, collapsible Available Events reference card.
+  • admin-analytics-section.tsx — 4 StatCards, 12-month ComposedChart (user growth stacked + total line), revenue bars + net line, top-10 features horizontal bar, cohort retention heatmap (5-color gradient), plan donut, active users + audited sites tables.
+  • admin-white-label-section.tsx — 4 StatCards, config cards grid (NOT table), sticky Branding Preview card rendering mock audit report with selected config's colors, Create/Edit dialog with color pickers + logo upload.
+  • admin-competitors-section.tsx — 3 StatCards, 3 sliders + comparison features checkboxes + plan limits inline-editable table + recent comparisons table with winner indicator.
+  • admin-security-section.tsx — 5 StatCards, 30-day failed-logins ComposedChart (red bars + amber IPs line), suspicious activity + active sessions tables, security settings card (2FA, password policy sliders, rate limit, IP whitelist), admin audit log table with old → new value pills.
+- Files modified (1): admin-view.tsx (TABS array 20→26, +6 lazy-mount TabsContent blocks + 6 icon imports + 6 section imports). Compact tab styling preserved.
+- All sections use strict TS interfaces (no `any`), `"use client"`, sonner toasts, shadcn/ui, lucide-react icons, emerald/teal brand accent (NO indigo/blue primary), zebra-striped tables, dark mode `dark:` prefixes, `formatCompact`/`formatCurrency`/`relativeTime`/`scoreHex` helpers, max-h-[30vh]/[40vh]/[50vh]/[60vh]/[70vh] overflow containers with SCROLLBAR_CLS.
+- Each section fires its API fetch on mount + on refreshKey change. Only the active tab's section renders (perf), matching the existing 20-tab pattern.
+- Lint: PASS (eslint . exit 0, 0 problems).
+- tsc: 0 admin errors. Remaining 4 tsc errors are pre-existing in examples/websocket + skills/image-edit + skills/stock-analysis-skill — unrelated to admin work.
+- 26-tab Super Admin Portal: Dashboard | Users | Organizations | Plans | Subscriptions | Billing | API Keys | Audits | System | Audit Rules | Scoring | AI Models | AI Costs | Crawler | Blog | Campaigns | Leads | Coupons | Affiliates | Announcements | **Feature Flags** | **Webhooks** | **Analytics** | **White Label** | **Competitors** | **Security** (new tabs bolded).
+
+Phase 4 (Enterprise) admin sections COMPLETE. All 6 P4 sections built, integrated, lint+type-checked clean.
+
+---
+Task ID: P4 (Phase 4 — Enterprise)
+Agent: main (Z.ai Code) + frontend-styling-expert subagent
+Task: Build Phase 4 Super Admin sections (Feature Flags, Webhooks, Analytics, White Label, Competitors, Security)
+
+Work Log:
+- Created 6 Phase 4 API routes:
+  - /api/admin/feature-flags (GET 10 flags + POST toggle/update) — global + per-plan feature flags with rollout %
+  - /api/admin/webhooks (GET 4 webhooks + 6 logs + 18 available events + POST create) — webhook management + delivery logs
+  - /api/admin/advanced-analytics (GET — 12-month user growth, revenue, feature usage, cohort retention heatmap, plan distribution, most active users, most audited sites)
+  - /api/admin/white-label (GET 3 configs with branding + custom domains) — white-label/branding management
+  - /api/admin/competitors (GET settings + plan limits + recent comparisons) — competitor management config
+  - /api/admin/security (GET — failed logins chart, suspicious activity, active sessions, security settings, admin audit log)
+- Delegated Phase 4 section build to frontend-styling-expert subagent:
+  - admin-feature-flags-section.tsx — 4 StatCards, filter bar, zebra flags table with switch toggle, mini F/S/P/A plan-override badges, rollout % progress bar, Edit/Create dialog
+  - admin-webhooks-section.tsx — 4 StatCards, 2-col layout (webhooks table + delivery logs), HTTP-status color-coded badges, event checklist dialog, masked secrets, collapsible Available Events reference
+  - admin-analytics-section.tsx — 4 StatCards, 12-month ComposedChart (newUsers + churned + total line), revenue bars + net line, top-10 features horizontal bar, cohort retention heatmap (5-color gradient), plan donut PieChart, active users + audited sites tables
+  - admin-white-label-section.tsx — 4 StatCards, config cards grid with color swatches + logo preview, sticky Branding Preview card rendering mock audit report with selected config's colors, Create/Edit dialog with color pickers + logo upload
+  - admin-competitors-section.tsx — 3 StatCards, 3 sliders (max competitors/URLs/crawl depth), comparison features 9-checkbox card, inline-editable plan limits table, recent comparisons table with score badges + winner indicator
+  - admin-security-section.tsx — 5 StatCards, 30-day failed-logins ComposedChart, suspicious activity + active sessions zebra tables, security settings card (2FA/session/password policy switches), admin audit log table with old→new value pills
+- Modified admin-view.tsx — added 6 new tabs (Feature Flags, Webhooks, Analytics, White Label, Competitors, Security). Total tab count: 20 → 26.
+- Fixed during dev: duplicate identifier in security section (renamed revokeSession→revokeTarget), nullish coalescing in webhooks + white-label sections.
+
+Stage Summary:
+- Files created: 6 section components + 6 API routes = 12 new files
+- Files modified: admin-view.tsx (26 tabs now)
+- Lint: PASS. tsc: 0 errors in src.
+- 26-tab Super Admin Portal COMPLETE:
+  Phase 1 (Core): Dashboard | Users | Organizations | Plans | Subscriptions | Billing | API Keys | Audits | System
+  Phase 2 (Product Control): Audit Rules | Scoring | AI Models | AI Costs | Crawler
+  Phase 3 (Growth): Blog | Campaigns | Leads | Coupons | Affiliates | Announcements
+  Phase 4 (Enterprise): Feature Flags | Webhooks | Analytics | White Label | Competitors | Security
+- All Phase 4 tabs verified via agent-browser + VLM (9/10 polish across all tabs)
+- Analytics tab: user growth chart, revenue chart, feature usage bar chart, cohort retention heatmap, plan donut, active users + audited sites tables all render correctly
+- Dev server running on :3000, dev.log clean.
+
+ALL 4 PHASES OF THE SUPER ADMIN PORTAL COMPLETE (26 tabs total).
