@@ -23,12 +23,20 @@ export function DashboardView() {
   if (!audit) return <EmptyAudit />;
 
   const cats: Category[] = ["technical", "content", "performance", "aeo", "geo", "security"];
-  const history = audit.history && audit.history.length > 1 ? audit.history : [
-    { date: "Jan", score: 62 }, { date: "Feb", score: 67 }, { date: "Mar", score: 71 }, { date: "Apr", score: audit.overallScore },
-  ];
+  // Use the real history; if it has same-day entries, relabel them with time
+  // so the x-axis doesn't show duplicate dates.
+  const realHistory = audit.history && audit.history.length > 1 ? audit.history : null;
+  const history = realHistory
+    ? realHistory.map((h, i) => {
+        const sameDay = realHistory.some((h2, j) => i !== j && h2.date === h.date);
+        return sameDay ? { ...h, date: `Run ${i + 1}` } : h;
+      })
+    : [
+        { date: "Jan", score: 62 }, { date: "Feb", score: 67 }, { date: "Mar", score: 71 }, { date: "Apr", score: audit.overallScore },
+      ];
 
-  const prev = history.length > 1 ? history[history.length - 2].score : audit.overallScore;
-  const delta = audit.overallScore - prev;
+  const prev = history.length > 1 ? history[history.length - 2].score : null;
+  const delta = prev !== null ? audit.overallScore - prev : null;
 
   return (
     <div className="space-y-6">
@@ -67,10 +75,20 @@ export function DashboardView() {
         <div className="grid lg:grid-cols-3 gap-6 items-center">
           <div className="flex flex-col items-center text-center">
             <ScoreRing value={audit.overallScore} size={150} label="Ufuq Score" sublabel="/ 100" />
-            <div className={`mt-2 text-sm font-medium flex items-center gap-1 ${delta >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-              {delta >= 0 ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />}
-              {delta >= 0 ? "+" : ""}{delta} from last audit
-            </div>
+            {delta !== null ? (
+              delta === 0 ? (
+                <div className="mt-2 text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  — No change from last audit
+                </div>
+              ) : (
+                <div className={`mt-2 text-sm font-medium flex items-center gap-1 ${delta > 0 ? "text-emerald-600" : "text-red-600"}`}>
+                  {delta > 0 ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />}
+                  {delta > 0 ? "+" : ""}{delta} from last audit
+                </div>
+              )
+            ) : (
+              <div className="mt-2 text-sm font-medium text-muted-foreground">First audit — no baseline yet</div>
+            )}
           </div>
           <div className="lg:col-span-2 grid sm:grid-cols-2 gap-3">
             {cats.map((c) => {

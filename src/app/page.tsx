@@ -14,6 +14,8 @@ import { GeoView } from "@/components/aeo-geo/geo-view";
 import { PerformanceView } from "@/components/performance/performance-view";
 import { SecurityView } from "@/components/security/security-view";
 import { AiRecommendationsView } from "@/components/dashboard/ai-recommendations-view";
+import { AiChatView } from "@/components/dashboard/ai-chat-view";
+import { SeoToolsView } from "@/components/dashboard/seo-tools-view";
 import { ReportsView } from "@/components/reports/reports-view";
 import { AdminView } from "@/components/admin/admin-view";
 import { SettingsView } from "@/components/settings/settings-view";
@@ -81,6 +83,8 @@ export default function Home() {
       case "performance": return <PerformanceView />;
       case "security": return <SecurityView />;
       case "ai-recommendations": return <AiRecommendationsView />;
+      case "ai-chat": return <AiChatView />;
+      case "tools": return <SeoToolsView />;
       case "reports": return <ReportsView />;
       case "admin": return <AdminView />;
       case "settings": return <SettingsView />;
@@ -109,7 +113,7 @@ export default function Home() {
         {/* Main content */}
         <main className="flex-1 min-w-0 overflow-x-hidden">
           <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-            {currentAudit || view === "admin" || view === "settings" || view === "billing" || view === "integrations" || view === "reports" || view === "history" || view === "competitors" ? (
+            {currentAudit || view === "admin" || view === "settings" || view === "billing" || view === "integrations" || view === "reports" || view === "history" || view === "competitors" || view === "ai-chat" || view === "tools" ? (
               renderView()
             ) : (
               <EmptyState onRun={() => setView("landing")} />

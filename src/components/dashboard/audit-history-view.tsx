@@ -82,6 +82,17 @@ function shortDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+// When multiple audits fall on the same day, show time (HH:MM) instead of date
+// to keep the x-axis readable and non-repetitive.
+function trendLabel(audits: { createdAt: string }[], idx: number): string {
+  const cur = new Date(audits[idx].createdAt);
+  const sameDay = audits.some((a, i) => i !== idx && new Date(a.createdAt).toDateString() === cur.toDateString());
+  if (sameDay) {
+    return cur.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  }
+  return cur.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 function truncateUrl(u: string, n = 38): string {
   if (u.length <= n) return u;
   // strip protocol first
@@ -92,6 +103,7 @@ function truncateUrl(u: string, n = 38): string {
 
 export function AuditHistoryView() {
   const setView = useAppStore((s) => s.setView);
+  const setCurrentAudit = useAppStore((s) => s.setCurrentAudit);
   const [audits, setAudits] = React.useState<AuditRow[] | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -183,8 +195,9 @@ export function AuditHistoryView() {
     : 0;
 
   // ---- Trend chart data (chronological) ----
-  const chrono = [...audits].reverse().map((a) => ({
-    date: shortDate(a.createdAt),
+  const chronoAudits = [...audits].reverse();
+  const chrono = chronoAudits.map((a, idx) => ({
+    date: trendLabel(chronoAudits, idx),
     score: a.overallScore,
     url: a.url,
   }));
@@ -204,8 +217,8 @@ export function AuditHistoryView() {
       })();
 
   // ---- Category trend (chronological) ----
-  const catTrend = [...audits].reverse().map((a) => {
-    const row: Record<string, number | string> = { date: shortDate(a.createdAt) };
+  const catTrend = chronoAudits.map((a, idx) => {
+    const row: Record<string, number | string> = { date: trendLabel(chronoAudits, idx) };
     for (const c of CAT_FIELDS) row[c.label] = (a[c.field] as number) ?? 0;
     return row;
   });
@@ -424,11 +437,20 @@ export function AuditHistoryView() {
                         variant="outline"
                         size="sm"
                         className="h-7 text-xs"
-                        onClick={() => {
+                        onClick={async () => {
                           toast.info("Loading audit…", {
                             description: truncateUrl(a.url, 50),
                           });
-                          setView("dashboard");
+                          try {
+                            const res = await fetch(`/api/audit/get?id=${a.id}`);
+                            const data = await res.json();
+                            if (!res.ok) throw new Error(data?.error || "Failed to load");
+                            setCurrentAudit(data);
+                            setView("dashboard");
+                            toast.success(`Loaded audit — score ${data.overallScore}/100`);
+                          } catch (e: any) {
+                            toast.error(e?.message || "Failed to load audit");
+                          }
                         }}
                       >
                         View

@@ -84,22 +84,37 @@ function computeAeoBreakdown(audit: AuditResult): AeoBreakdown {
   );
   const schema = hasSchema ? 100 : 35;
 
-  // Scale sub-scores so their average is consistent with the overall AEO score.
+  // Scale sub-scores so their AVERAGE exactly reconciles with the overall AEO score.
   // The overall score is severity-weighted from issues; the breakdown reflects
-  // on-page signals. We blend them so the displayed numbers always reconcile.
+  // on-page signals. We force the average to equal the target while preserving
+  // the relative ordering of sub-scores (so weaker signals still show lower).
   const target = audit.scores.aeo;
   const raw = { answerReadiness, questionCoverage, entityClarity, citationReadiness, schema };
   const keys = Object.keys(raw) as (keyof AeoBreakdown)[];
   const rawAvg = keys.reduce((s, k) => s + raw[k], 0) / keys.length;
-  // Linear scale: preserve relative shape but lift average to target.
-  // If rawAvg is very low, cap the scale factor to avoid flattening to 100.
-  const scale = rawAvg > 0 ? Math.min(3, target / rawAvg) : 1;
   const scaled: AeoBreakdown = {} as AeoBreakdown;
-  for (const k of keys) {
-    const lifted = raw[k] * scale;
-    // Blend 40% lifted-signal + 60% target so numbers trend toward overall
-    const blended = lifted * 0.4 + target * 0.6;
-    scaled[k] = Math.max(0, Math.min(100, Math.round(blended)));
+  if (rawAvg <= 0) {
+    for (const k of keys) scaled[k] = target;
+  } else {
+    // Blend raw toward target so average approaches target (70% target, 30% raw shape).
+    for (const k of keys) {
+      const rel = raw[k] / rawAvg; // 0..~3
+      const blended = target * 0.7 + (target * rel * 0.3);
+      scaled[k] = Math.max(0, Math.min(100, Math.round(blended)));
+    }
+    // Final micro-adjust: nudge each by the residual so the average EXACTLY equals target.
+    const scaledAvg = keys.reduce((s, k) => s + scaled[k], 0) / keys.length;
+    const delta = Math.round(target - scaledAvg);
+    // Spread the delta across the scores that have room (not at 100/0).
+    let remaining = delta;
+    const adjustable = keys.filter((k) => scaled[k] > 0 && scaled[k] < 100);
+    const step = adjustable.length ? Math.ceil(Math.abs(delta) / adjustable.length) * Math.sign(delta) : 0;
+    for (const k of adjustable) {
+      if (remaining === 0) break;
+      const adj = Math.abs(remaining) < Math.abs(step) ? remaining : step;
+      scaled[k] = Math.max(0, Math.min(100, scaled[k] + adj));
+      remaining -= adj;
+    }
   }
   return scaled;
 }

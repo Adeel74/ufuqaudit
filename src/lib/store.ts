@@ -18,6 +18,8 @@ export type ViewKey =
   | "performance"
   | "security"
   | "ai-recommendations"
+  | "ai-chat"
+  | "tools"
   | "reports"
   | "admin"
   | "settings"
@@ -73,6 +75,8 @@ export const ADMIN_VIEWS: { key: ViewKey; label: string; icon: string }[] = [
   { key: "performance", label: "Performance", icon: "Gauge" },
   { key: "security", label: "Security", icon: "Shield" },
   { key: "ai-recommendations", label: "AI Recommendations", icon: "Sparkles" },
+  { key: "ai-chat", label: "AI Chat", icon: "Bot" },
+  { key: "tools", label: "SEO Tools", icon: "Wrench" },
   { key: "reports", label: "Reports", icon: "FileBarChart" },
   { key: "integrations", label: "Integrations", icon: "Plug" },
   { key: "billing", label: "Billing", icon: "CreditCard" },
