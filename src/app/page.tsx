@@ -34,6 +34,9 @@ import { SettingsView } from "@/components/settings/settings-view";
 import { BillingView } from "@/components/settings/billing-view";
 import { IntegrationsView } from "@/components/settings/integrations-view";
 import { PricingView } from "@/components/landing/pricing-view";
+import { DocsView } from "@/components/docs/docs-view";
+import { FeaturesPage, AboutPage, BlogPublicPage } from "@/components/docs/public-pages";
+import { PublicNav } from "@/components/layout/public-nav";
 import { Sidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/topbar";
 import { Footer } from "@/components/layout/footer";
@@ -61,6 +64,7 @@ export default function Home() {
   if (view === "landing") {
     return (
       <div className="min-h-screen flex flex-col bg-background">
+        <PublicNav />
         <LandingView />
         <Footer />
         <CommandPalette />
@@ -79,7 +83,21 @@ export default function Home() {
   if (view === "pricing") {
     return (
       <div className="min-h-screen flex flex-col bg-background">
+        <PublicNav />
         <PricingView />
+        <Footer />
+        <CommandPalette />
+      </div>
+    );
+  }
+  if (view === "docs" || view === "features" || view === "about" || view === "blog-public") {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <PublicNav />
+        {view === "docs" && <DocsView />}
+        {view === "features" && <FeaturesPage />}
+        {view === "about" && <AboutPage />}
+        {view === "blog-public" && <BlogPublicPage />}
         <Footer />
         <CommandPalette />
       </div>
