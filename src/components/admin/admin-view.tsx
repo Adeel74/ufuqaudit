@@ -275,11 +275,11 @@ export function AdminView() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>URL</TableHead>
+                    <TableHead className="min-w-[140px]">URL</TableHead>
                     <TableHead>User</TableHead>
-                    <TableHead>Score</TableHead>
+                    <TableHead className="text-right">Score</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>When</TableHead>
+                    <TableHead className="whitespace-nowrap">Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="zebra">
@@ -326,7 +326,7 @@ export function AdminView() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>When</TableHead>
+                    <TableHead className="whitespace-nowrap">Date</TableHead>
                     <TableHead>Action</TableHead>
                     <TableHead>Entity</TableHead>
                     <TableHead>Details</TableHead>

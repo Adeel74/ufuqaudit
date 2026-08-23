@@ -98,11 +98,11 @@ export function DashboardView() {
                 <button
                   key={c}
                   onClick={() => setView(c === "security" ? "security" : c === "aeo" ? "aeo" : c === "geo" ? "geo" : c === "performance" ? "performance" : "issues")}
-                  className="rounded-lg border bg-card p-3 text-left hover:shadow-sm transition-shadow"
+                  className="rounded-lg border bg-card p-3 text-left hover:shadow-md hover:-translate-y-0.5 transition-all"
                 >
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-medium">{meta.label}</span>
-                    <span className="text-sm font-bold tabular-nums" style={{ color: scoreColor(v) }}>{v}</span>
+                    <span className="text-xs font-medium text-muted-foreground">{meta.label}</span>
+                    <span className="text-sm font-bold tabular-nums" style={{ color: meta.color }}>{v}</span>
                   </div>
                   <ScoreBar value={v} color={meta.color} />
                 </button>

@@ -121,10 +121,10 @@
   }
   /* Zebra striping for data tables — opt-in via the `zebra` class on <tbody> */
   tbody.zebra > tr:nth-child(even) {
-    @apply bg-muted/30;
+    @apply bg-muted/40;
   }
   tbody.zebra > tr:hover {
-    @apply bg-accent/50;
+    @apply bg-accent/60;
   }
 }
 

@@ -570,3 +570,120 @@ Stage Summary:
 - Key decisions: custom SVG graph (NOT Recharts) because Recharts lacks network graph support; deterministic layout via seeded PRNG (mulberry32 + FNV-1a hash of URLs) for stable per-audit rendering; concentric ring layout with home at center and link-count-based depth; emerald/teal brand accent only, red reserved for orphan pages; in-SVG tooltips (no DOM portal needed) keep it responsive via viewBox + preserveAspectRatio.
 - All hooks called before early returns; `useMemo` for graph + sorted list, `useCallback` for toast announcer.
 - No files outside scope touched.
+
+---
+Task ID: 14
+Agent: frontend-styling-expert (scheduled + portal)
+Task: Build Scheduled Audits view + Client Portal view
+
+Work Log:
+- Read worklog.md (project context: emerald/teal accent only, NO indigo/blue primary, p-4/p-5 cards, SCROLLBAR_CLS pattern, sonner toasts, lucide-react icons, "use client" + strict TS, zebra striping via `className="zebra"` on `<TableBody>`, StatCard/ViewHeader shared helpers).
+- Read shared.tsx (ViewHeader/StatCard/EmptyAudit/scoreColor), store.ts (ViewKey already includes "scheduled" + "portal"), page.tsx (already imports + routes ScheduledAuditsView/ClientPortalView into the view switch + allow-list), keywords-view.tsx + backlinks-view.tsx (mirror conventions), alert-dialog.tsx + dropdown-menu.tsx + switch.tsx + select.tsx + dialog.tsx + table.tsx + badge.tsx + input.tsx + card.tsx (shadcn variants/APIs).
+- Confirmed `/api/scheduled` (GET list / POST create) + `/api/portal` (GET list / POST create / DELETE?id=) API routes already exist with their own in-memory mock data + matching TypeScript interfaces.
+- Created `/home/z/my-project/src/components/dashboard/scheduled-view.tsx` exporting `ScheduledAuditsView`:
+  - Header "Scheduled Audits" + CalendarClock icon + subtitle "Automate recurring audits and get notified" + emerald "New schedule" button → opens Dialog.
+  - On mount: GET /api/scheduled (cache: no-store) with full loading skeleton (4 KPI skeletons + 1 table skeleton) + inline error handling on empty state.
+  - 4 StatCards row: Active Schedules (enabled count, emerald), Total Runs (mock — `estimateRuns()` = floor(daysSinceCreated/cycle) per job, summed), Avg Score (mean of lastScore, colored by scoreColor; shows "—" when no scored runs), Next Run (relTime of soonest enabled nextRunAt; "—" when no active schedules).
+  - Schedules table (zebra tbody, sticky TableHeader, SCROLLBAR_CLS wrapper max-h-[60vh]): URL (truncate + Tooltip), Frequency (Badge — weekly=emerald, biweekly=amber, monthly=slate), Schedule ("Mon at 09:00" via DAYS[]+formatSchedule), Last Run (relTime or "Never"), Last Score (rounded pill colored by scoreColor or "—"), Next Run (relTime in emerald when enabled, "—" when paused), Notify (email truncated + Tooltip), Enabled (Switch with onCheckedChange → local state update + toast.success on enable with "Next run <rel>", toast.info on pause), Actions (DropdownMenu ghost MoreHorizontal button → "Run now" toast.success("Audit queued"), separator, destructive "Delete" → setDeleteTarget → AlertDialog confirm → removes from local list + toast.success).
+  - New schedule Dialog (sm:max-w-md): URL input (auto-filled with currentAudit?.url), Frequency Select (weekly/biweekly/monthly), Day Select (Sun-Sat from DAYS[]), Time `<input type=time>` (default "09:00"), Notify email input (auto-filled with user.email from store). Below a Separator + emerald-tinted live-preview strip showing "Will run <Day> at <Time> (<frequency>)". Create button → POST /api/scheduled, prepends new schedule to list, toast.success, closes dialog. Cancel/close while adding disabled.
+  - Empty state: dashed Card with emerald CalendarClock icon + "No scheduled audits yet — automate your monitoring" + "Create schedule" button (reuses openCreateDialog).
+  - Custom inline `relTime()` helper: "just now" → "3m ago" → "2h ago" → "5d ago" → "2mo ago" for past, "<1m" → "in 3m" → "in 2h" → "in 5d" → "in 2mo" for future, "Never" for null.
+  - `estimateRuns()` mocked past-run count: 0 when lastRunAt null, else `max(1, floor(daysSinceCreated / cycle))` with cycle = 7/14/30 by frequency.
+  - AlertDialog delete confirmation: shows the URL being deleted; Cancel keeps, Action button (emerald) executes `onConfirmDelete()` with `e.preventDefault()` so the alert-dialog doesn't auto-dismiss before we handle it.
+- Created `/home/z/my-project/src/components/dashboard/client-portal-view.tsx` exporting `ClientPortalView`:
+  - Header "Client Portal" + Share2 icon + subtitle "Share branded audit reports with clients" + emerald "Create link" button → opens Dialog.
+  - On mount: GET /api/portal (cache: no-store) with full loading skeleton + inline error handling on empty state.
+  - 4 StatCards row: Total Links (emerald LinkIcon), Total Views (teal-dark Eye), Active Links (emerald when >0, red when 0 — Users icon, hint = expired count), Avg Score (Gauge icon colored by scoreColor).
+  - Links table (zebra tbody, sticky header, SCROLLBAR_CLS): Client (name + email stacked), Audit URL (truncate + Tooltip), Score (colored pill), Share Link (readonly Input showing `/portal/<token>` + outline Copy button → `navigator.clipboard.writeText(buildFullUrl(token))` + toast.success with description=full URL; clipboard unavailable → toast.error), Views (Badge — emerald-tinted when >0, muted when 0), Last Viewed (relTime or "Never"), Expires (red "Expired" badge when past, relTime when future, "Never" when null), Actions (DropdownMenu → "Copy link", "View" → toast.info("Opening portal…") with description, separator, destructive "Revoke" → AlertDialog confirm → DELETE /api/portal?id= + remove from list + toast.success).
+  - Create link Dialog (sm:max-w-lg): 2-col client name + email, 2-col audit URL + score (number), 2-col expiry Select (7/30/90/Never) + agency name (default "UfuqAudit"), brand color swatches (5 buttons: emerald/teal/amber/rose/violet — selected shows ring + CheckCircle2). Below a Separator + "Client preview" label with Eye icon + live `BrandingPreview` card. Helper text under preview. Create button → POST /api/portal, prepends to list, toast.success with the shareable full URL as description, closes dialog.
+  - `BrandingPreview` mini mockup: bordered card with brand-colored header strip (agency name + CheckCircle2 logo + "Audit Report" tag), body showing "Prepared for: <clientName>" + truncated audit URL + big score number colored by brand color + 3 mock score bars (SEO/Perf/AEO) with brand-colored fill widths.
+  - `buildFullUrl(token)` guards `typeof window === "undefined"` (SSR-safe) — falls back to just `/portal/<token>` path on server, full origin URL on client.
+  - `isExpired(link)` helper: false when expiresAt null, else `expiresAt < now`.
+  - Revoke AlertDialog: shows client name; Cancel/Keep disabled while revoking; Action button is red (destructive) with Loader2 spinner during DELETE.
+- Custom scrollbar utility SCROLLBAR_CLS reused on both tables: `max-h-[60vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-track]:bg-transparent`.
+- Emerald/teal accent used everywhere for the app chrome (header icon, primary buttons, KPI accents, copy success toasts, Schedule dialog preview strip). Brand color in BrandingPreview is user-selected (not emerald) — that's the only place non-emerald/teal colors appear, which is intentional white-label behavior.
+- Both views handle loading → empty → main render states. Both dialogs prefill form on open with currentAudit context (URL for scheduled, URL+score for portal) and notifyEmail/agencyName defaults. Both dropdowns use ghost MoreHorizontal triggers + AlertDialog confirmations for destructive actions.
+- Lint: PASS (`bun run lint` exit 0, no output, no warnings).
+- tsc: 0 lines matching `scheduled-view|client-portal` in tsc output — both new files clean. Remaining tsc errors are in unrelated `examples/websocket/` and `skills/` directories only.
+
+Stage Summary:
+- Files created:
+  - src/components/dashboard/scheduled-view.tsx (ScheduledAuditsView — ~720 lines)
+  - src/components/dashboard/client-portal-view.tsx (ClientPortalView — ~865 lines)
+- No files modified outside scope (page.tsx + store.ts + /api/scheduled + /api/portal were already wired in by prior tasks; I only consumed them).
+- Key decisions:
+  • `estimateRuns()` mocks past-run count from `createdAt` + frequency cycle (7/14/30 days) — believable-looking stat without needing a real run-history API.
+  • `relTime()` returns past (`"3d ago"`) AND future (`"in 3d"`) formats + `"Never"` for null — used for Last Run, Next Run, Last Viewed, and Expires columns uniformly across both views.
+  • Switch toggles update local state immediately + fire sonner toast (success on enable with description showing next run relTime, info on pause) — no API call needed since /api/scheduled has no PATCH endpoint.
+  • "Run now" → toast.success("Audit queued", ...) — no API call needed per spec ("toast 'Queued'").
+  • Scheduled-view delete → local-state remove + toast.success (no DELETE API on /api/scheduled); Portal-view revoke → real DELETE /api/portal?id= call + state sync + red destructive AlertDialog with spinner during request.
+  • Brand color picker uses 5 native `<button>` swatches with `ring-2 ring-offset-2` for the selected state + white CheckCircle2 inside the colored swatch — accessible (`aria-pressed` set), keyboard-focusable, no custom select needed.
+  • BrandingPreview reuses the user-selected brand color for header strip, score number color, and score-bar fills — so the preview accurately reflects what the client will see, while the rest of the app stays emerald/teal.
+  • Share Link table cell uses a readonly `<Input>` + small outline Copy button — feels native, the path is selectable for manual copy too. Full URL (with origin) is built client-side via `buildFullUrl()` which guards against SSR.
+  • All form inputs prefill from `currentAudit` (URL for both views; overallScore for portal) and `user.email` (scheduled notify email) — frictionless creation from the audit context.
+
+---
+Task ID: cron-review-5
+Agent: webDevReview cron (Z.ai Code)
+Task: QA pass + bug fixes + new features (Scheduled Audits, Client Portal)
+
+Work Log:
+- Read worklog.md (5 prior rounds: MVP, cron-review-1 history/competitors/PDF, cron-review-2 AI Chat/SEO Tools/reload, cron-review-3 keywords/backlinks, cron-review-4 content/notifications + sidebar fix)
+- Full QA pass with agent-browser: ran audit, screenshotted key views, VLM analysis
+- VLM findings (this round):
+  1. Admin: "When" column header truncated ("Whe") in Recent Audits + Audit Logs tables
+  2. Dashboard: category score number used scoreColor (green/amber/red) while bar used category color (purple/orange/etc) — visual mismatch
+  3. Pages: zebra striping too subtle to notice
+- Fixed all bugs:
+  - Admin: renamed "When" → "Date" with `whitespace-nowrap`, added `min-w-[140px]` to URL header, `text-right` to Score header. Both Recent Audits + Audit Logs tables fixed.
+  - Dashboard: category score number now uses `meta.color` (matches the bar color) instead of `scoreColor(v)` — consistent visual identity per category. Added hover lift (`hover:shadow-md hover:-translate-y-0.5`) to category cards.
+  - Zebra striping: increased contrast from `bg-muted/30` → `bg-muted/40`, hover from `bg-accent/50` → `bg-accent/60` in globals.css.
+
+- New features (2 major):
+  1. Scheduled Audits (scheduled-view.tsx + /api/scheduled) — recurring audit scheduler:
+     - 4 StatCards (Active Schedules, Total Runs, Avg Score, Next Run)
+     - Zebra-striped table: URL, Frequency badge (weekly=emerald/biweekly=amber/monthly=slate), Schedule "Mon at 09:00", Last Run (relative), Last Score (colored badge), Next Run (relative emerald), Notify email, Enabled Switch (toast on toggle), Actions dropdown (Run now / Delete with AlertDialog)
+     - New schedule dialog: URL (prefilled from currentAudit), Frequency/Day/Time selects, Notify email, live preview strip
+     - API: GET list + POST create (3 mock schedules seeded: example.com weekly, stripe.com monthly, shopify.com biweekly disabled)
+  2. Client Portal (client-portal-view.tsx + /api/portal) — white-label shareable audit links:
+     - 4 StatCards (Total Links, Total Views, Active Links, Avg Score)
+     - Zebra-striped table: Client (name+email), Audit URL, Score badge, Share Link (copyable /portal/<token> input + Copy button → toast), Views badge, Last Viewed (relative), Expires (red "Expired" / relative / "Never"), Actions dropdown (Copy link / View / Revoke with AlertDialog → DELETE)
+     - Create link dialog: client name, email, audit URL + score (prefilled from currentAudit), expiry select (7/30/90/Never days), agency name, 5 brand color swatches (emerald/teal/amber/rose/violet)
+     - Branding preview card: mini mockup showing agency name + brand color + score + 3 mock score bars (all colored with selected brand color)
+     - API: GET list + POST create + DELETE (3 mock links seeded: Acme Corp, Globex Inc, Initech with varied expiry/views)
+
+- New API routes: /api/scheduled (GET + POST), /api/portal (GET + POST + DELETE)
+- New sidebar entries: Scheduled (CalendarClock icon), Client Portal (Share2 icon) — both always-enabled
+- Store + page.tsx routing updated with scheduled + portal ViewKeys
+
+Stage Summary:
+- Files created:
+  - src/components/dashboard/scheduled-view.tsx (ScheduledAuditsView)
+  - src/components/dashboard/client-portal-view.tsx (ClientPortalView)
+  - src/app/api/scheduled/route.ts (scheduled audit jobs CRUD)
+  - src/app/api/portal/route.ts (client portal links CRUD)
+- Files modified:
+  - src/lib/store.ts (scheduled + portal ViewKeys + sidebar entries)
+  - src/app/page.tsx (new view routing)
+  - src/components/layout/sidebar.tsx (CalendarClock + Share2 icons, always-enabled list)
+  - src/components/admin/admin-view.tsx (When→Date rename + whitespace-nowrap + min-w)
+  - src/components/dashboard/dashboard-view.tsx (category score color = meta.color + hover lift)
+  - src/app/globals.css (zebra striping contrast increased)
+- Lint: PASS. tsc: 0 errors in src. No console errors. All 24 views verified via agent-browser + VLM.
+- Scheduled audits: table renders with 3 seeded schedules, frequency badges, switch toggles, actions dropdown
+- Client portal: table renders with 3 seeded links, copyable share URLs, branding preview with user-selected color
+- Admin "When" column no longer truncated
+- Dashboard category score + bar colors now match
+- Zebra striping more visible
+- Dev server running on :3000, dev.log clean.
+
+Next-phase opportunities:
+- Backend cron job to actually execute enabled scheduled audits
+- PATCH endpoints for scheduled toggle persistence + DELETE for real schedule deletion
+- Real /portal/[token] route page for clients to view branded audit
+- Google Search Console OAuth integration
+- Email report delivery (nodemailer + template)
+- API rate limiting + Stripe billing abstraction
+- WordPress/Shopify CMS plugins
+- On-page SEO editor
+- Real backlink API integration

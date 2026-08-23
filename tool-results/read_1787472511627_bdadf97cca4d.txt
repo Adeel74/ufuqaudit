@@ -1,0 +1,756 @@
+     1→"use client";
+     2→
+     3→import * as React from "react";
+     4→import { ViewHeader, StatCard } from "@/components/dashboard/shared";
+     5→import { Button } from "@/components/ui/button";
+     6→import { Card } from "@/components/ui/card";
+     7→import { Input } from "@/components/ui/input";
+     8→import { Badge } from "@/components/ui/badge";
+     9→import { Skeleton } from "@/components/ui/skeleton";
+    10→import { Label } from "@/components/ui/label";
+    11→import {
+    12→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    13→} from "@/components/ui/table";
+    14→import {
+    15→  Tooltip, TooltipTrigger, TooltipContent,
+    16→} from "@/components/ui/tooltip";
+    17→import {
+    18→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
+    19→} from "@/components/ui/dialog";
+    20→import {
+    21→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    22→} from "@/components/ui/select";
+    23→import {
+    24→  PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis,
+    25→  Tooltip as RTooltip, ResponsiveContainer, CartesianGrid, Legend,
+    26→} from "recharts";
+    27→import {
+    28→  Search, Plus, TrendingUp, TrendingDown, Minus, Hash, Target,
+    29→  Trophy, Gauge, Loader2, ChevronUp, ChevronDown, ChevronsUpDown,
+    30→  Star, Link as LinkIcon, Video, HelpCircle, ListChecks,
+    31→} from "lucide-react";
+    32→import { toast } from "sonner";
+    33→import { cn } from "@/lib/utils";
+    34→
+    35→// ---------- Types ----------
+    36→interface KeywordRow {
+    37→  keyword: string;
+    38→  position: number;
+    39→  prevPosition: number;
+    40→  volume: number;
+    41→  difficulty: number;
+    42→  url: string;
+    43→  serpFeatures: string[];
+    44→  trend: number[];
+    45→}
+    46→
+    47→interface KeywordStats {
+    48→  total: number;
+    49→  avgPosition: number;
+    50→  totalVolume: number;
+    51→  top3: number;
+    52→  top10: number;
+    53→  improved: number;
+    54→}
+    55→
+    56→// ---------- Constants ----------
+    57→const EMERALD = "#10b981";
+    58→const EMERALD_BTN = "bg-emerald-600 hover:bg-emerald-700 text-white";
+    59→
+    60→const SCROLLBAR_CLS =
+    61→  "max-h-[60vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 " +
+    62→  "[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 " +
+    63→  "[&::-webkit-scrollbar-track]:bg-transparent";
+    64→
+    65→// Distribution buckets + colors (green → red gradient as position worsens)
+    66→const BUCKETS = [
+    67→  { key: "1-3", label: "Positions 1–3", color: "#10b981", test: (p: number) => p >= 1 && p <= 3 },
+    68→  { key: "4-10", label: "Positions 4–10", color: "#f59e0b", test: (p: number) => p >= 4 && p <= 10 },
+    69→  { key: "11-30", label: "Positions 11–30", color: "#f97316", test: (p: number) => p >= 11 && p <= 30 },
+    70→  { key: "31-50", label: "Positions 31–50", color: "#ef4444", test: (p: number) => p >= 31 && p <= 50 },
+    71→  { key: "50+", label: "Positions 50+", color: "#94a3b8", test: (p: number) => p > 50 },
+    72→];
+    73→
+    74→// Distinct colors for the top-5 keyword trend lines (emerald first for the #1 keyword).
+    75→const LINE_COLORS = ["#10b981", "#0ea5e9", "#f59e0b", "#ec4899", "#8b5cf6"];
+    76→
+    77→// SERP feature metadata
+    78→const SERP_META: Record<string, { label: string; cls: string; icon: React.ComponentType<{ className?: string }> }> = {
+    79→  organic: { label: "Organic", cls: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300", icon: ListChecks },
+    80→  featured: { label: "Featured", cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400", icon: Star },
+    81→  sitelinks: { label: "Sitelinks", cls: "bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-400", icon: ListChecks },
+    82→  faq: { label: "FAQ", cls: "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-400", icon: HelpCircle },
+    83→  video: { label: "Video", cls: "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400", icon: Video },
+    84→};
+    85→
+    86→type SortKey = "position" | "volume" | "difficulty" | "keyword";
+    87→type SortDir = "asc" | "desc";
+    88→type RangeFilter = "all" | "top3" | "top10" | "top30";
+    89→
+    90→// ---------- Helpers ----------
+    91→function posColor(p: number): string {
+    92→  if (p <= 3) return "#10b981";
+    93→  if (p <= 10) return "#f59e0b";
+    94→  if (p <= 30) return "#f97316";
+    95→  return "#ef4444";
+    96→}
+    97→
+    98→function posBadgeCls(p: number): string {
+    99→  if (p <= 3) return "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400";
+   100→  if (p <= 10) return "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400";
+   101→  if (p <= 30) return "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400";
+   102→  return "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400";
+   103→}
+   104→
+   105→function diffColor(d: number): string {
+   106→  if (d < 0) return "text-emerald-600 dark:text-emerald-400"; // improved (position dropped)
+   107→  if (d > 0) return "text-red-600 dark:text-red-400"; // dropped
+   108→  return "text-muted-foreground";
+   109→}
+   110→
+   111→function fmtVolume(v: number): string {
+   112→  if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + "M";
+   113→  if (v >= 1_000) return (v / 1_000).toFixed(1) + "K";
+   114→  return v.toString();
+   115→}
+   116→
+   117→function fmtDelta(cur: number, prev: number): { text: string; delta: number } {
+   118→  const d = cur - prev;
+   119→  return { text: d === 0 ? "—" : (d > 0 ? `+${d}` : `${d}`), delta: d };
+   120→}
+   121→
+   122→function truncateUrl(u: string, n = 32): string {
+   123→  if (u.length <= n) return u;
+   124→  const stripped = u.replace(/^https?:\/\//, "");
+   125→  if (stripped.length <= n) return stripped;
+   126→  return stripped.slice(0, n - 1) + "…";
+   127→}
+   128→
+   129→// ---------- Sparkline (tiny inline line chart for table cells) ----------
+   130→function Sparkline({ data, color }: { data: number[]; color: string }) {
+   131→  const d = data.length ? data : [0, 0];
+   132→  return (
+   133→    <div style={{ width: 80, height: 30 }}>
+   134→      <ResponsiveContainer width="100%" height="100%">
+   135→        <LineChart data={d.map((v, i) => ({ i, v }))} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+   136→          <Line
+   137→            type="monotone"
+   138→            dataKey="v"
+   139→            stroke={color}
+   140→            strokeWidth={1.5}
+   141→            dot={false}
+   142→            isAnimationActive={false}
+   143→          />
+   144→        </LineChart>
+   145→      </ResponsiveContainer>
+   146→    </div>
+   147→  );
+   148→}
+   149→
+   150→// ---------- Sort header button ----------
+   151→function SortableHead({
+   152→  label, sortKey, current, dir, onSort, className, align = "left",
+   153→}: {
+   154→  label: string;
+   155→  sortKey: SortKey;
+   156→  current: SortKey;
+   157→  dir: SortDir;
+   158→  onSort: (k: SortKey) => void;
+   159→  className?: string;
+   160→  align?: "left" | "right";
+   161→}) {
+   162→  const active = current === sortKey;
+   163→  return (
+   164→    <TableHead className={className}>
+   165→      <button
+   166→        type="button"
+   167→        onClick={() => onSort(sortKey)}
+   168→        className={cn(
+   169→          "inline-flex items-center gap-1 text-xs font-medium hover:text-foreground transition-colors",
+   170→          align === "right" && "flex-row-reverse",
+   171→          active && "text-foreground",
+   172→        )}
+   173→      >
+   174→        {label}
+   175→        {active ? (
+   176→          dir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+   177→        ) : (
+   178→          <ChevronsUpDown className="w-3 h-3 opacity-40" />
+   179→        )}
+   180→      </button>
+   181→    </TableHead>
+   182→  );
+   183→}
+   184→
+   185→// =================== Component ===================
+   186→export function KeywordsView() {
+   187→  const [data, setData] = React.useState<{ keywords: KeywordRow[]; stats: KeywordStats } | null>(null);
+   188→  const [error, setError] = React.useState<string | null>(null);
+   189→  const [loading, setLoading] = React.useState(true);
+   190→
+   191→  // filter + sort state
+   192→  const [search, setSearch] = React.useState("");
+   193→  const [range, setRange] = React.useState<RangeFilter>("all");
+   194→  const [sortKey, setSortKey] = React.useState<SortKey>("position");
+   195→  const [sortDir, setSortDir] = React.useState<SortDir>("asc");
+   196→
+   197→  // add-keyword dialog
+   198→  const [addOpen, setAddOpen] = React.useState(false);
+   199→  const [newKw, setNewKw] = React.useState("");
+   200→  const [adding, setAdding] = React.useState(false);
+   201→
+   202→  const fetchData = React.useCallback(async () => {
+   203→    setLoading(true);
+   204→    setError(null);
+   205→    try {
+   206→      const r = await fetch("/api/keywords", { cache: "no-store" });
+   207→      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+   208→      const j = (await r.json()) as { keywords: KeywordRow[]; stats: KeywordStats };
+   209→      setData({ keywords: Array.isArray(j.keywords) ? j.keywords : [], stats: j.stats });
+   210→    } catch (e: unknown) {
+   211→      const msg = e instanceof Error ? e.message : "Failed to load keywords";
+   212→      setError(msg);
+   213→      setData({ keywords: [], stats: { total: 0, avgPosition: 0, totalVolume: 0, top3: 0, top10: 0, improved: 0 } });
+   214→    } finally {
+   215→      setLoading(false);
+   216→    }
+   217→  }, []);
+   218→
+   219→  React.useEffect(() => {
+   220→    fetchData();
+   221→  }, [fetchData]);
+   222→
+   223→  const onSort = (k: SortKey) => {
+   224→    if (k === sortKey) {
+   225→      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+   226→    } else {
+   227→      setSortKey(k);
+   228→      setSortDir(k === "keyword" ? "asc" : "asc");
+   229→    }
+   230→  };
+   231→
+   232→  const onAddKeyword = async () => {
+   233→    const kw = newKw.trim();
+   234→    if (!kw) {
+   235→      toast.error("Enter a keyword to track");
+   236→      return;
+   237→    }
+   238→    setAdding(true);
+   239→    try {
+   240→      const r = await fetch("/api/keywords", {
+   241→        method: "POST",
+   242→        headers: { "Content-Type": "application/json" },
+   243→        body: JSON.stringify({ keyword: kw }),
+   244→      });
+   245→      if (!r.ok) {
+   246→        const j = await r.json().catch(() => ({}));
+   247→        throw new Error(j?.error || `HTTP ${r.status}`);
+   248→      }
+   249→      const j = (await r.json()) as { keyword: KeywordRow };
+   250→      setData((prev) => {
+   251→        if (!prev) return prev;
+   252→        // Avoid duplicates — replace if same keyword exists.
+   253→        const others = prev.keywords.filter((k) => k.keyword.toLowerCase() !== kw.toLowerCase());
+   254→        return {
+   255→          keywords: [j.keyword, ...others],
+   256→          stats: {
+   257→            ...prev.stats,
+   258→            total: prev.stats.total + 1,
+   259→            avgPosition: Math.round(
+   260→              ([...others, j.keyword].reduce((s, k) => s + k.position, 0)) / (others.length + 1),
+   261→            ),
+   262→            top3: [...others, j.keyword].filter((k) => k.position <= 3).length,
+   263→            top10: [...others, j.keyword].filter((k) => k.position <= 10).length,
+   264→            totalVolume: [...others, j.keyword].reduce((s, k) => s + k.volume, 0),
+   265→            improved: [...others, j.keyword].filter((k) => k.position < k.prevPosition).length,
+   266→          },
+   267→        };
+   268→      });
+   269→      toast.success(`Now tracking "${kw}"`);
+   270→      setNewKw("");
+   271→      setAddOpen(false);
+   272→    } catch (e: unknown) {
+   273→      const msg = e instanceof Error ? e.message : "Failed to add keyword";
+   274→      toast.error(msg);
+   275→    } finally {
+   276→      setAdding(false);
+   277→    }
+   278→  };
+   279→
+   280→  // ---------- Loading ----------
+   281→  if (loading) {
+   282→    return (
+   283→      <div className="space-y-6">
+   284→        <ViewHeader
+   285→          title="Keyword Rank Tracker"
+   286→          subtitle="Monitor your keyword positions and SERP features"
+   287→          icon={Search}
+   288→          actions={
+   289→            <Button size="sm" className={EMERALD_BTN} disabled>
+   290→              <Plus className="w-3.5 h-3.5 mr-1" /> Add keyword
+   291→            </Button>
+   292→          }
+   293→        />
+   294→        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+   295→          {[0, 1, 2, 3, 4].map((i) => (
+   296→            <Skeleton key={i} className="h-24 rounded-xl" />
+   297→          ))}
+   298→        </div>
+   299→        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   300→          <Skeleton className="h-[300px] rounded-xl" />
+   301→          <Skeleton className="h-[300px] rounded-xl" />
+   302→        </div>
+   303→        <Skeleton className="h-96 rounded-xl" />
+   304→      </div>
+   305→    );
+   306→  }
+   307→
+   308→  const keywords = data?.keywords ?? [];
+   309→  const stats = data?.stats ?? { total: 0, avgPosition: 0, totalVolume: 0, top3: 0, top10: 0, improved: 0 };
+   310→
+   311→  // ---------- Empty ----------
+   312→  if (keywords.length === 0) {
+   313→    return (
+   314→      <div className="space-y-6">
+   315→        <ViewHeader
+   316→          title="Keyword Rank Tracker"
+   317→          subtitle="Monitor your keyword positions and SERP features"
+   318→          icon={Search}
+   319→          actions={
+   320→            <Button size="sm" className={EMERALD_BTN} onClick={() => setAddOpen(true)}>
+   321→              <Plus className="w-3.5 h-3.5 mr-1" /> Add keyword
+   322→            </Button>
+   323→          }
+   324→        />
+   325→        <Card className="p-10 text-center border-dashed">
+   326→          <div className="w-14 h-14 mx-auto rounded-full bg-muted flex items-center justify-center mb-3">
+   327→            <Search className="w-6 h-6 text-muted-foreground" />
+   328→          </div>
+   329→          <h3 className="font-semibold text-lg">No keywords tracked yet</h3>
+   330→          <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+   331→            {error
+   332→              ? `We couldn't load your keywords (${error}). Try again in a moment.`
+   333→              : "Add your first keyword to start tracking its position, search volume, and SERP features."}
+   334→          </p>
+   335→          <Button className={cn(EMERALD_BTN, "mt-5")} onClick={() => setAddOpen(true)}>
+   336→            <Plus className="w-4 h-4 mr-1" /> Add your first keyword
+   337→          </Button>
+   338→        </Card>
+   339→        <AddKeywordDialog
+   340→          open={addOpen}
+   341→          onOpenChange={setAddOpen}
+   342→          value={newKw}
+   343→          onChange={setNewKw}
+   344→          onAdd={onAddKeyword}
+   345→          adding={adding}
+   346→        />
+   347→      </div>
+   348→    );
+   349→  }
+   350→
+   351→  // ---------- Derived: distribution ----------
+   352→  const distribution = BUCKETS.map((b) => ({
+   353→    name: b.label,
+   354→    key: b.key,
+   355→    value: keywords.filter((k) => b.test(k.position)).length,
+   356→    color: b.color,
+   357→  }));
+   358→
+   359→  // ---------- Derived: top-5 keyword trends (12 weeks) ----------
+   360→  // Lower position = better, so we pick the 5 keywords with the lowest current position.
+   361→  const top5 = [...keywords].sort((a, b) => a.position - b.position).slice(0, 5);
+   362→  // Each keyword's trend array has 13 points (12 weeks + current). Use index as x-axis.
+   363→  const weeks = top5[0]?.trend.length ?? 0;
+   364→  const trendData = Array.from({ length: weeks }, (_, i) => {
+   365→    const row: Record<string, number | string> = { week: `W${i + 1}` };
+   366→    top5.forEach((k) => {
+   367→      row[k.keyword] = k.trend[i] ?? 0;
+   368→    });
+   369→    return row;
+   370→  });
+   371→
+   372→  // ---------- Derived: filtered + sorted table rows ----------
+   373→  const filtered = keywords.filter((k) => {
+   374→    if (search && !k.keyword.toLowerCase().includes(search.toLowerCase())) return false;
+   375→    if (range === "top3" && k.position > 3) return false;
+   376→    if (range === "top10" && k.position > 10) return false;
+   377→    if (range === "top30" && k.position > 30) return false;
+   378→    return true;
+   379→  });
+   380→
+   381→  const sorted = [...filtered].sort((a, b) => {
+   382→    let cmp = 0;
+   383→    if (sortKey === "keyword") cmp = a.keyword.localeCompare(b.keyword);
+   384→    else cmp = (a[sortKey] as number) - (b[sortKey] as number);
+   385→    return sortDir === "asc" ? cmp : -cmp;
+   386→  });
+   387→
+   388→  return (
+   389→    <div className="space-y-6">
+   390→      <ViewHeader
+   391→        title="Keyword Rank Tracker"
+   392→        subtitle="Monitor your keyword positions and SERP features"
+   393→        icon={Search}
+   394→        actions={
+   395→          <Button size="sm" className={EMERALD_BTN} onClick={() => setAddOpen(true)}>
+   396→            <Plus className="w-3.5 h-3.5 mr-1" /> Add keyword
+   397→          </Button>
+   398→        }
+   399→      />
+   400→
+   401→      {/* Stats row — 5 KPI cards */}
+   402→      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+   403→        <StatCard label="Total Keywords" value={stats.total} hint="Tracked" color="#0f766e" icon={Hash} />
+   404→        <StatCard label="Avg Position" value={stats.avgPosition} hint="Across all keywords" color={posColor(stats.avgPosition)} icon={Gauge} />
+   405→        <StatCard label="Top 3" value={stats.top3} hint="On page 1, top spots" color="#10b981" icon={Trophy} />
+   406→        <StatCard label="Top 10" value={stats.top10} hint="On page 1" color="#f59e0b" icon={Target} />
+   407→        <StatCard
+   408→          label="Improved"
+   409→          value={stats.improved}
+   410→          hint="Vs. previous check"
+   411→          color="#10b981"
+   412→          icon={TrendingUp}
+   413→        />
+   414→      </div>
+   415→
+   416→      {/* Distribution donut + Trend lines */}
+   417→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   418→        {/* Distribution donut */}
+   419→        <Card className="p-5">
+   420→          <div className="flex items-center justify-between mb-4">
+   421→            <div>
+   422→              <h3 className="font-semibold flex items-center gap-2">
+   423→                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: EMERALD }} />
+   424→                Ranking Distribution
+   425→              </h3>
+   426→              <p className="text-xs text-muted-foreground mt-0.5">Keywords by SERP position bucket</p>
+   427→            </div>
+   428→            <Badge variant="outline" className="font-mono text-[11px]">{keywords.length}</Badge>
+   429→          </div>
+   430→          <div style={{ height: 240 }}>
+   431→            <ResponsiveContainer width="100%" height="100%">
+   432→              <PieChart>
+   433→                <Pie
+   434→                  data={distribution}
+   435→                  dataKey="value"
+   436→                  nameKey="name"
+   437→                  cx="50%"
+   438→                  cy="50%"
+   439→                  innerRadius={55}
+   440→                  outerRadius={85}
+   441→                  paddingAngle={2}
+   442→                  stroke="none"
+   443→                >
+   444→                  {distribution.map((d) => (
+   445→                    <Cell key={d.key} fill={d.color} />
+   446→                  ))}
+   447→                </Pie>
+   448→                <RTooltip
+   449→                  contentStyle={{
+   450→                    borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 12, padding: "8px 10px",
+   451→                  }}
+   452→                  formatter={(v: number, n: string) => [`${v} keyword${v === 1 ? "" : "s"}`, n]}
+   453→                />
+   454→              </PieChart>
+   455→            </ResponsiveContainer>
+   456→          </div>
+   457→          {/* Legend */}
+   458→          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
+   459→            {distribution.map((d) => (
+   460→              <div key={d.key} className="flex items-center gap-2 text-xs">
+   461→                <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: d.color }} />
+   462→                <span className="text-muted-foreground truncate">{d.name}</span>
+   463→                <span className="ml-auto font-semibold tabular-nums">{d.value}</span>
+   464→              </div>
+   465→            ))}
+   466→          </div>
+   467→        </Card>
+   468→
+   469→        {/* Top-5 position trend (lower = better) */}
+   470→        <Card className="p-5">
+   471→          <div className="flex items-center justify-between mb-4">
+   472→            <div>
+   473→              <h3 className="font-semibold">Top 5 Keyword Trends</h3>
+   474→              <p className="text-xs text-muted-foreground mt-0.5">
+   475→                Position over 12 weeks — <span className="text-emerald-600 dark:text-emerald-400 font-medium">lower is better</span>
+   476→              </p>
+   477→            </div>
+   478→            <Badge variant="outline" className="font-mono text-[11px]">12 wk</Badge>
+   479→          </div>
+   480→          <div style={{ height: 280 }}>
+   481→            <ResponsiveContainer width="100%" height="100%">
+   482→              <LineChart data={trendData} margin={{ top: 8, right: 16, left: -8, bottom: 0 }}>
+   483→                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.4} vertical={false} />
+   484→                <XAxis dataKey="week" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
+   485→                {/* Reversed Y axis: 1 at the top, 60 at the bottom — so "better" reads upward. */}
+   486→                <YAxis
+   487→                  reversed
+   488→                  domain={[1, 60]}
+   489→                  allowDataOverflow
+   490→                  stroke="#94a3b8"
+   491→                  fontSize={11}
+   492→                  tickLine={false}
+   493→                  axisLine={false}
+   494→                  width={32}
+   495→                />
+   496→                <RTooltip
+   497→                  contentStyle={{
+   498→                    borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 12, padding: "8px 10px",
+   499→                  }}
+   500→                  labelStyle={{ fontWeight: 600, marginBottom: 4 }}
+   501→                  formatter={(v: number, n: string) => [`#${v}`, n]}
+   502→                />
+   503→                <Legend
+   504→                  wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+   505→                  iconType="circle"
+   506→                  iconSize={8}
+   507→                />
+   508→                {top5.map((k, i) => (
+   509→                  <Line
+   510→                    key={k.keyword}
+   511→                    type="monotone"
+   512→                    dataKey={k.keyword}
+   513→                    stroke={LINE_COLORS[i % LINE_COLORS.length]}
+   514→                    strokeWidth={2}
+   515→                    dot={{ r: 2.5, fill: LINE_COLORS[i % LINE_COLORS.length] }}
+   516→                    activeDot={{ r: 4 }}
+   517→                  />
+   518→                ))}
+   519→              </LineChart>
+   520→            </ResponsiveContainer>
+   521→          </div>
+   522→        </Card>
+   523→      </div>
+   524→
+   525→      {/* Filter bar */}
+   526→      <Card className="p-4">
+   527→        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+   528→          <div className="relative flex-1">
+   529→            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+   530→            <Input
+   531→              placeholder="Search keywords…"
+   532→              value={search}
+   533→              onChange={(e) => setSearch(e.target.value)}
+   534→              className="pl-9"
+   535→            />
+   536→          </div>
+   537→          <div className="flex items-center gap-2 flex-wrap">
+   538→            <Select value={range} onValueChange={(v) => setRange(v as RangeFilter)}>
+   539→              <SelectTrigger size="sm" className="w-[140px]">
+   540→                <SelectValue placeholder="Position" />
+   541→              </SelectTrigger>
+   542→              <SelectContent>
+   543→                <SelectItem value="all">All positions</SelectItem>
+   544→                <SelectItem value="top3">Top 3 only</SelectItem>
+   545→                <SelectItem value="top10">Top 10 only</SelectItem>
+   546→                <SelectItem value="top30">Top 30 only</SelectItem>
+   547→              </SelectContent>
+   548→            </Select>
+   549→            <Select value={sortKey} onValueChange={(v) => onSort(v as SortKey)}>
+   550→              <SelectTrigger size="sm" className="w-[150px]">
+   551→                <SelectValue placeholder="Sort by" />
+   552→              </SelectTrigger>
+   553→              <SelectContent>
+   554→                <SelectItem value="position">Sort: Position</SelectItem>
+   555→                <SelectItem value="volume">Sort: Volume</SelectItem>
+   556→                <SelectItem value="difficulty">Sort: Difficulty</SelectItem>
+   557→                <SelectItem value="keyword">Sort: Keyword (A–Z)</SelectItem>
+   558→              </SelectContent>
+   559→            </Select>
+   560→          </div>
+   561→        </div>
+   562→      </Card>
+   563→
+   564→      {/* Keywords table */}
+   565→      <Card className="p-5">
+   566→        <div className="flex items-center justify-between mb-4">
+   567→          <div>
+   568→            <h3 className="font-semibold">Tracked Keywords</h3>
+   569→            <p className="text-xs text-muted-foreground mt-0.5">
+   570→              {sorted.length} of {keywords.length} shown
+   571→            </p>
+   572→          </div>
+   573→        </div>
+   574→        <div className={SCROLLBAR_CLS}>
+   575→          <Table>
+   576→            <TableHeader className="sticky top-0 bg-card z-10">
+   577→              <TableRow>
+   578→                <SortableHead label="Keyword" sortKey="keyword" current={sortKey} dir={sortDir} onSort={onSort} className="min-w-[180px]" />
+   579→                <TableHead className="w-[90px] text-right">Position</TableHead>
+   580→                <TableHead className="w-[70px] text-right">Δ</TableHead>
+   581→                <SortableHead label="Volume" sortKey="volume" current={sortKey} dir={sortDir} onSort={onSort} className="w-[90px]" align="right" />
+   582→                <SortableHead label="Difficulty" sortKey="difficulty" current={sortKey} dir={sortDir} onSort={onSort} className="w-[140px]" align="right" />
+   583→                <TableHead className="min-w-[180px]">URL</TableHead>
+   584→                <TableHead className="min-w-[160px]">SERP Features</TableHead>
+   585→                <TableHead className="w-[90px] text-right">Trend</TableHead>
+   586→              </TableRow>
+   587→            </TableHeader>
+   588→            <TableBody className="zebra">
+   589→              {sorted.map((k) => {
+   590→                const { text: deltaText, delta } = fmtDelta(k.position, k.prevPosition);
+   591→                return (
+   592→                  <TableRow key={k.keyword} className="hover:bg-muted/40">
+   593→                    <TableCell className="font-medium">{k.keyword}</TableCell>
+   594→                    <TableCell className="text-right">
+   595→                      <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold tabular-nums", posBadgeCls(k.position))}>
+   596→                        #{k.position}
+   597→                      </span>
+   598→                    </TableCell>
+   599→                    <TableCell className="text-right">
+   600→                      <span className={cn("inline-flex items-center gap-0.5 text-xs font-medium tabular-nums", diffColor(delta))}>
+   601→                        {delta === 0 ? (
+   602→                          <Minus className="w-3 h-3" />
+   603→                        ) : delta < 0 ? (
+   604→                          <TrendingDown className="w-3 h-3" />
+   605→                        ) : (
+   606→                          <TrendingUp className="w-3 h-3" />
+   607→                        )}
+   608→                        {deltaText}
+   609→                      </span>
+   610→                    </TableCell>
+   611→                    <TableCell className="text-right text-sm tabular-nums">{fmtVolume(k.volume)}</TableCell>
+   612→                    <TableCell>
+   613→                      <DifficultyBar value={k.difficulty} />
+   614→                    </TableCell>
+   615→                    <TableCell className="max-w-[200px]">
+   616→                      <div className="flex items-center gap-1.5 min-w-0">
+   617→                        <LinkIcon className="w-3 h-3 text-muted-foreground shrink-0" />
+   618→                        <Tooltip>
+   619→                          <TooltipTrigger asChild>
+   620→                            <span className="text-xs text-muted-foreground truncate cursor-help">{truncateUrl(k.url)}</span>
+   621→                          </TooltipTrigger>
+   622→                          <TooltipContent side="top" className="max-w-[400px] break-all">
+   623→                            {k.url}
+   624→                          </TooltipContent>
+   625→                        </Tooltip>
+   626→                      </div>
+   627→                    </TableCell>
+   628→                    <TableCell>
+   629→                      <div className="flex flex-wrap gap-1">
+   630→                        {k.serpFeatures.length === 0 ? (
+   631→                          <span className="text-xs text-muted-foreground">—</span>
+   632→                        ) : (
+   633→                          k.serpFeatures.map((f) => {
+   634→                            const meta = SERP_META[f] ?? { label: f, cls: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300", icon: Star };
+   635→                            const Icon = meta.icon;
+   636→                            return (
+   637→                              <span
+   638→                                key={f}
+   639→                                className={cn("inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium", meta.cls)}
+   640→                              >
+   641→                                <Icon className="w-2.5 h-2.5" />
+   642→                                {meta.label}
+   643→                              </span>
+   644→                            );
+   645→                          })
+   646→                        )}
+   647→                      </div>
+   648→                    </TableCell>
+   649→                    <TableCell className="text-right">
+   650→                      <div className="inline-block">
+   651→                        <Sparkline data={k.trend} color={posColor(k.position)} />
+   652→                      </div>
+   653→                    </TableCell>
+   654→                  </TableRow>
+   655→                );
+   656→              })}
+   657→              {sorted.length === 0 && (
+   658→                <TableRow>
+   659→                  <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-10">
+   660→                    No keywords match your filters.
+   661→                  </TableCell>
+   662→                </TableRow>
+   663→              )}
+   664→            </TableBody>
+   665→          </Table>
+   666→        </div>
+   667→      </Card>
+   668→
+   669→      <AddKeywordDialog
+   670→        open={addOpen}
+   671→        onOpenChange={setAddOpen}
+   672→        value={newKw}
+   673→        onChange={setNewKw}
+   674→        onAdd={onAddKeyword}
+   675→        adding={adding}
+   676→      />
+   677→    </div>
+   678→  );
+   679→}
+   680→
+   681→// ---------- Difficulty bar (0–100, colored) ----------
+   682→function DifficultyBar({ value }: { value: number }) {
+   683→  const v = Math.max(0, Math.min(100, value));
+   684→  const color = v <= 30 ? "#10b981" : v <= 60 ? "#f59e0b" : v <= 80 ? "#f97316" : "#ef4444";
+   685→  const label = v <= 30 ? "Easy" : v <= 60 ? "Medium" : v <= 80 ? "Hard" : "Very hard";
+   686→  return (
+   687→    <div className="flex items-center gap-2 justify-end">
+   688→      <div className="flex-1 max-w-[80px] h-1.5 rounded-full bg-muted overflow-hidden">
+   689→        <div
+   690→          className="h-full rounded-full transition-all"
+   691→          style={{ width: `${v}%`, backgroundColor: color }}
+   692→        />
+   693→      </div>
+   694→      <span className="text-xs tabular-nums w-7 text-right" style={{ color }}>{v}</span>
+   695→      <span className="text-[10px] text-muted-foreground w-14 hidden sm:inline">{label}</span>
+   696→    </div>
+   697→  );
+   698→}
+   699→
+   700→// ---------- Add keyword dialog ----------
+   701→function AddKeywordDialog({
+   702→  open, onOpenChange, value, onChange, onAdd, adding,
+   703→}: {
+   704→  open: boolean;
+   705→  onOpenChange: (o: boolean) => void;
+   706→  value: string;
+   707→  onChange: (v: string) => void;
+   708→  onAdd: () => void;
+   709→  adding: boolean;
+   710→}) {
+   711→  return (
+   712→    <Dialog open={open} onOpenChange={onOpenChange}>
+   713→      <DialogContent className="sm:max-w-md">
+   714→        <DialogHeader>
+   715→          <DialogTitle>Track a new keyword</DialogTitle>
+   716→        </DialogHeader>
+   717→        <div className="space-y-2">
+   718→          <Label htmlFor="kw-input" className="text-xs">Keyword or phrase</Label>
+   719→          <Input
+   720→            id="kw-input"
+   721→            placeholder="e.g. seo audit tool"
+   722→            value={value}
+   723→            onChange={(e) => onChange(e.target.value)}
+   724→            onKeyDown={(e) => {
+   725→              if (e.key === "Enter" && !adding) {
+   726→                e.preventDefault();
+   727→                onAdd();
+   728→              }
+   729→            }}
+   730→            autoFocus
+   731→          />
+   732→          <p className="text-[11px] text-muted-foreground">
+   733→            We&apos;ll start tracking its SERP position, search volume, and SERP features.
+   734→          </p>
+   735→        </div>
+   736→        <DialogFooter>
+   737→          <DialogClose asChild>
+   738→            <Button variant="outline" size="sm" disabled={adding}>Cancel</Button>
+   739→          </DialogClose>
+   740→          <Button size="sm" className={EMERALD_BTN} onClick={onAdd} disabled={adding}>
+   741→            {adding ? (
+   742→              <>
+   743→                <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Adding…
+   744→              </>
+   745→            ) : (
+   746→              <>
+   747→                <Plus className="w-3.5 h-3.5 mr-1" /> Add keyword
+   748→              </>
+   749→            )}
+   750→          </Button>
+   751→        </DialogFooter>
+   752→      </DialogContent>
+   753→    </Dialog>
+   754→  );
+   755→}
+   756→
