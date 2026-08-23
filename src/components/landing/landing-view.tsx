@@ -14,10 +14,26 @@ import { ScoreRing } from "@/components/dashboard/score-ui";
 import { OnboardingWizard } from "@/components/landing/onboarding-wizard";
 
 export function LandingView() {
-  const { setView, setCurrentAudit } = useAppStore();
+  const { setView, setCurrentAudit, login } = useAppStore();
   const [url, setUrl] = React.useState("");
   const [running, setRunning] = React.useState(false);
   const [onboardingOpen, setOnboardingOpen] = React.useState(false);
+
+  const signInAsAdmin = async () => {
+    try {
+      const res = await fetch("/api/auth/demo-admin", { method: "POST" });
+      const data = await res.json();
+      if (data?.admin) {
+        login(data.admin.email);
+        toast.success(`Signed in as ${data.admin.name}`, {
+          description: `${data.admin.email} · ${data.admin.plan.toUpperCase()} plan`,
+        });
+        setView("admin");
+      }
+    } catch {
+      toast.error("Failed to sign in as admin");
+    }
+  };
 
   const runAudit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -148,7 +164,7 @@ export function LandingView() {
       <PricingTeaser onView={() => setView("pricing")} />
 
       {/* CTA */}
-      <FinalCTA onRun={() => { setUrl(""); window.scrollTo({ top: 0, behavior: "smooth" }); }} onWizard={() => setOnboardingOpen(true)} />
+      <FinalCTA onRun={() => { setUrl(""); window.scrollTo({ top: 0, behavior: "smooth" }); }} onWizard={() => setOnboardingOpen(true)} onAdmin={signInAsAdmin} />
 
       <OnboardingWizard open={onboardingOpen} onClose={() => setOnboardingOpen(false)} />
     </div>
@@ -407,7 +423,7 @@ function PricingTeaser({ onView }: { onView: () => void }) {
   );
 }
 
-function FinalCTA({ onRun, onWizard }: { onRun: () => void; onWizard: () => void }) {
+function FinalCTA({ onRun, onWizard, onAdmin }: { onRun: () => void; onWizard: () => void; onAdmin: () => void }) {
   const { setView } = useAppStore();
   return (
     <section className="py-16 sm:py-24">
@@ -427,6 +443,12 @@ function FinalCTA({ onRun, onWizard }: { onRun: () => void; onWizard: () => void
               </Button>
               <Button size="lg" variant="ghost" className="text-white/70 hover:bg-white/10 hover:text-white" onClick={() => setView("pricing")}>
                 View Pricing
+              </Button>
+            </div>
+            <div className="mt-6 pt-6 border-t border-white/20">
+              <p className="text-xs text-white/60 mb-3">Are you an administrator?</p>
+              <Button size="sm" variant="outline" className="border-white/30 text-white hover:bg-white/10" onClick={onAdmin}>
+                <ShieldCheck className="w-3.5 h-3.5 mr-1" /> Sign in as Super Admin
               </Button>
             </div>
           </div>

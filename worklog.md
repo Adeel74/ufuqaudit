@@ -1157,3 +1157,63 @@ Phase 1 (Core Admin) COMPLETE. Next phases:
 - Phase 2 — Product Control: SEO Rules → Scoring → AEO → GEO → AI Models → AI Costs → Crawler → Reports
 - Phase 3 — Growth: Blog CMS → SEO CMS → Email Marketing → Leads → Coupons → Affiliates → Announcements
 - Phase 4 — Enterprise: White Label → Client Portal → Advanced API → Webhooks → Competitor Management → Advanced Analytics → Feature Flags
+
+---
+Task ID: P2
+Agent: frontend-styling-expert (phase2-admin)
+Task: Build Phase 2 Super Admin sections (Audit Rules, Scoring, AI Models, AI Costs, Crawler)
+
+Work Log:
+- Read worklog.md, admin-helpers.tsx (formatters, badge classes, SCROLLBAR_CLS, EMERALD_BTN), admin-view.tsx (tab/lazy-mount pattern), and existing sections (admin-system, admin-audits, admin-api-keys, admin-billing, admin-plans) for shared conventions.
+- Inspected 5 existing API routes (/api/admin/audit-rules, scoring, ai-models, ai-costs, crawler) to lock down response shapes for strict TS typing.
+- Created `src/components/admin/sections/admin-audit-rules-section.tsx` (AdminAuditRulesSection): 4 StatCards (Total/Enabled/Disabled/Critical), filter bar (search + category + severity + status selects), zebra table grouped by category header rows, severity badges (red/orange/amber/emerald), score impact, switch toggle (optimistic + POST toggle), plan availability mini-badges (F/S/P/A), Edit dialog (severity/scoreImpact/status/recommendation/fixInstructions textarea). Loading skeleton + empty state.
+- Created `src/components/admin/sections/admin-scoring-section.tsx` (AdminScoringSection): weights card with 6 category sliders (0–50) + live Total % indicator that turns red when ≠100, Save (POST /api/admin/scoring, server normalizes to 100) + Reset to defaults (25/20/15/15/15/10). Right side: Recharts PieChart donut with live updates + legend. Bottom: explanation card with per-category weight badges + server total.
+- Created `src/components/admin/sections/admin-ai-models-section.tsx` (AdminAIModelsSection): 3 StatCards (Total/Enabled/Default model name), zebra models table with provider badge, masked API key, temperature, max tokens, context window, cost per input/output token, Enabled switch (optimistic + POST toggle), Default radio (POST setDefault), Edit + Test buttons (toast). Routing card with 3 tiers (Cheap/Premium/Large) + per-tier model select. AI Features card (10 features) with per-feature enabled switch + model select. Add-model dialog (provider/model/apiKey/temp/maxTokens/context/costs).
+- Created `src/components/admin/sections/admin-ai-costs-section.tsx` (AdminAICostsSection): 5 StatCards (Total Tokens/Total Cost/Monthly Budget/Budget Used %/Avg per Request). Budget progress bar with emerald→amber→red thresholds + warning callout. 30-day Recharts AreaChart (emerald gradient, dual Y-axis cost $ / tokens). Cost-per-model horizontal BarChart (Cell colors from API). Cost-per-feature table (sorted by cost desc). Top users table (with mini progress bar per user, % of total). Budget controls card (monthly budget, per-user limit, max tokens/req, auto-fallback switch, Save).
+- Created `src/components/admin/sections/admin-crawler-section.tsx` (AdminCrawlerSection): 4 StatCards (Running/Queued/Completed/Failed). Server metrics card with 6 MetricBar components (CPU/Memory/Disk/Queue/Workers/DB conns) each with emerald/amber/red threshold coloring, plus Network badge. Running crawlers table with animated progress bar + relative time + Pause/Cancel (AlertDialog)/View actions. Queued crawlers compact list with position badge + Cancel. Failed crawlers red-tinted list with Retry (re-enqueues). Completed crawlers table with score badge (scoreHex color) + duration + View/Re-run. Controls card with Start/Pause/Stop all buttons + max-concurrent (1-20) and timeout (1000-60000ms) sliders.
+- Modified `src/components/admin/admin-view.tsx`: added 4 icon imports (ListChecks, Gauge, Brain, Server — DollarSign already present) + 5 section imports + 5 TabsTrigger entries after System + 5 lazy-mounted TabsContent blocks (only render when tab active). All 9 original tabs unchanged.
+- Lint PASS (eslint ., exit 0). tsc --noEmit: 0 errors in src/components/admin (the only remaining tsc errors are pre-existing in examples/ and skills/ — socket.io-client, image-edit, stock-analysis-skill — unrelated to admin work).
+
+Stage Summary:
+- Files created (5): admin-audit-rules-section.tsx (23KB), admin-scoring-section.tsx (12KB), admin-ai-models-section.tsx (29KB), admin-ai-costs-section.tsx (18KB), admin-crawler-section.tsx (27KB).
+- Files modified (1): admin-view.tsx (TABS array 9→14, +5 lazy-mount TabsContent blocks).
+- All sections use strict TS interfaces (no `any`), `"use client"`, sonner toasts, shadcn/ui, lucide-react icons, emerald/teal brand accent (NO indigo/blue primary), zebra-striped tables, dark mode `dark:` prefixes, `formatCompact`/`formatCurrency`/`relativeTime`/`formatDuration` helpers, max-h-[40vh]/[60vh] overflow containers with SCROLLBAR_CLS.
+- Each section fires its API fetch on mount + on refreshKey change. Only the active tab's section renders (perf), matching the existing 9-tab pattern.
+- 14-tab Super Admin Portal: Dashboard | Users | Organizations | Plans | Subscriptions | Billing | API Keys | Audits | System | **Audit Rules** | **Scoring** | **AI Models** | **AI Costs** | **Crawler** (new tabs bolded).
+
+---
+Task ID: P2 + Demo Admin (Phase 2 — Product Control)
+Agent: main (Z.ai Code) + frontend-styling-expert subagent
+Task: Create demo admin login + Phase 2 Super Admin sections (Audit Rules, Scoring, AI Models, AI Costs, Crawler)
+
+Work Log:
+- Created /api/auth/demo-admin (POST creates admin@ufuqaudit.app as Super Admin with agency plan, GET checks existence). Triggered creation — demo admin confirmed in DB.
+- Added "Sign in as Super Admin" button to landing page FinalCTA — calls /api/auth/demo-admin, logs in as admin, navigates to Admin portal. Toast confirms "Signed in as Super Admin".
+- Created 5 Phase 2 API routes:
+  - /api/admin/audit-rules (GET 24 rules + POST toggle/update) — rules across 9 categories with severity/scoreImpact/status/planAvailability
+  - /api/admin/scoring (GET weights + POST normalize to 100%) — 6 category weights (Technical 25%/Content 20%/Performance 15%/AEO 15%/GEO 15%/Security 10%)
+  - /api/admin/ai-models (GET 5 models from Z.ai/OpenAI/Anthropic/Google + POST toggle/setDefault) — with routing (cheap/premium/large) + 10 AI features config
+  - /api/admin/ai-costs (GET — 30-day daily cost trend, cost per model, cost per feature, top users by cost, budget tracking)
+  - /api/admin/crawler (GET — running/queued/completed/failed crawls + server metrics: CPU/memory/disk/network/workers/DB connections)
+- Delegated Phase 2 section build to frontend-styling-expert subagent:
+  - admin-audit-rules-section.tsx (23KB) — 4 StatCards, filter bar, zebra table grouped by category, severity badges, switch toggles, Edit dialog, plan availability badges
+  - admin-scoring-section.tsx (12KB) — 6 sliders with live Total% indicator, Save (normalizes), Reset, live PieChart donut, explanation card
+  - admin-ai-models-section.tsx (29KB) — 3 StatCards, models table (provider badge, masked keys, costs, toggle, setDefault), routing tiers, 10 AI features with per-feature model select, Add model dialog
+  - admin-ai-costs-section.tsx (18KB) — 5 StatCards, budget progress bar (amber/red thresholds), 30-day dual-axis AreaChart, cost-per-model BarChart, cost-per-feature table, top-users table, budget controls
+  - admin-crawler-section.tsx (27KB) — 4 StatCards, server metrics (6 MetricBars), running crawlers table (progress bars, Pause/Cancel), queued/failed lists, completed crawlers table, controls (Start/Stop/Pause all + sliders)
+- Modified admin-view.tsx — added 5 new tabs (Audit Rules, Scoring, AI Models, AI Costs, Crawler) with lazy mounting
+- Fixed tab label truncation: reduced tab padding (px-3→px-2.5) + font size (text-xs) + whitespace-nowrap. VLM confirmed "tab labels fully readable, not truncated."
+
+Stage Summary:
+- Files created: 5 section components + 5 API routes + 1 demo-admin auth route = 11 new files
+- Files modified: admin-view.tsx (14 tabs now), landing-view.tsx (Sign in as Super Admin button)
+- Lint: PASS. tsc: 0 errors in src.
+- Demo admin: admin@ufuqaudit.app with Super Admin role + Agency plan. "Sign in as Super Admin" button on landing page logs in and navigates to Admin portal.
+- 14-tab Super Admin Portal: Dashboard | Users | Organizations | Plans | Subscriptions | Billing | API Keys | Audits | System | Audit Rules | Scoring | AI Models | AI Costs | Crawler
+- All Phase 2 tabs verified via agent-browser + VLM (9/10 polish across all tabs)
+- Tab labels no longer truncated (verified by VLM)
+- Dev server running on :3000, dev.log clean.
+
+Phase 2 (Product Control) COMPLETE. Remaining:
+- Phase 3 — Growth: Blog CMS → SEO CMS → Email Marketing → Leads → Coupons → Affiliates → Announcements
+- Phase 4 — Enterprise: White Label → Client Portal → Advanced API → Webhooks → Competitor Management → Advanced Analytics → Feature Flags
