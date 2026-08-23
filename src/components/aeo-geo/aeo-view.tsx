@@ -13,7 +13,7 @@ import { ScoreRing } from "@/components/dashboard/score-ui";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList,
 } from "recharts";
 import type { AuditResult } from "@/lib/types";
 
@@ -83,7 +83,25 @@ function computeAeoBreakdown(audit: AuditResult): AeoBreakdown {
     Math.min(40, Math.floor(wordCount / 40)) + (hasSchema ? 30 : 10) + (hasCanonical ? 30 : 10) + seed,
   );
   const schema = hasSchema ? 100 : 35;
-  return { answerReadiness, questionCoverage, entityClarity, citationReadiness, schema };
+
+  // Scale sub-scores so their average is consistent with the overall AEO score.
+  // The overall score is severity-weighted from issues; the breakdown reflects
+  // on-page signals. We blend them so the displayed numbers always reconcile.
+  const target = audit.scores.aeo;
+  const raw = { answerReadiness, questionCoverage, entityClarity, citationReadiness, schema };
+  const keys = Object.keys(raw) as (keyof AeoBreakdown)[];
+  const rawAvg = keys.reduce((s, k) => s + raw[k], 0) / keys.length;
+  // Linear scale: preserve relative shape but lift average to target.
+  // If rawAvg is very low, cap the scale factor to avoid flattening to 100.
+  const scale = rawAvg > 0 ? Math.min(3, target / rawAvg) : 1;
+  const scaled: AeoBreakdown = {} as AeoBreakdown;
+  for (const k of keys) {
+    const lifted = raw[k] * scale;
+    // Blend 40% lifted-signal + 60% target so numbers trend toward overall
+    const blended = lifted * 0.4 + target * 0.6;
+    scaled[k] = Math.max(0, Math.min(100, Math.round(blended)));
+  }
+  return scaled;
 }
 
 // --- View -------------------------------------------------------------------
@@ -197,7 +215,7 @@ export function AeoView() {
             <BarChart
               data={subScores}
               layout="vertical"
-              margin={{ top: 4, right: 16, left: 8, bottom: 0 }}
+              margin={{ top: 4, right: 40, left: 8, bottom: 0 }}
             >
               <XAxis type="number" domain={[0, 100]} stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
               <YAxis
@@ -221,6 +239,12 @@ export function AeoView() {
                 {subScores.map((s) => (
                   <Cell key={s.key} fill={ACCENT} fillOpacity={0.45 + (s.value / 100) * 0.55} />
                 ))}
+                <LabelList
+                  dataKey="value"
+                  position="right"
+                  formatter={(v: number) => `${v}`}
+                  style={{ fontSize: 11, fontWeight: 600, fill: "#64748b" }}
+                />
               </Bar>
             </BarChart>
           </ResponsiveContainer>

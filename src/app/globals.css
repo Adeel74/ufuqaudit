@@ -120,3 +120,25 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Print styles for PDF report export */
+@media print {
+  /* Hide everything except the print report */
+  body * {
+    visibility: hidden;
+  }
+  #ufuq-print-report, #ufuq-print-report * {
+    visibility: visible;
+  }
+  #ufuq-print-report {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  @page {
+    margin: 1.5cm;
+    size: A4;
+  }
+}

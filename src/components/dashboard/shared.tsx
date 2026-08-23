@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import {
   AlertOctagon, AlertTriangle, AlertCircle, Lightbulb,
 } from "lucide-react";
+import { AnimatedNumber } from "./animated-number";
 
 // Title strip for each dashboard view
 export function ViewHeader({ title, subtitle, icon: Icon, actions }: {
@@ -57,13 +58,17 @@ export function StatCard({
   label: string; value: React.ReactNode; hint?: string; color?: string;
   icon?: React.ComponentType<{ className?: string }>;
 }) {
+  // Animate numeric values
+  const isNumeric = typeof value === "number";
   return (
-    <div className="rounded-xl border bg-card p-4">
+    <div className="rounded-xl border bg-card p-4 transition-all hover:shadow-md hover:-translate-y-0.5">
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground font-medium">{label}</span>
         {Icon && <Icon className="w-4 h-4 text-muted-foreground" />}
       </div>
-      <div className="mt-1.5 text-2xl font-bold tabular-nums" style={color ? { color } : undefined}>{value}</div>
+      <div className="mt-1.5 text-2xl font-bold tabular-nums" style={color ? { color } : undefined}>
+        {isNumeric ? <AnimatedNumber value={value as number} /> : value}
+      </div>
       {hint && <div className="text-[10px] text-muted-foreground mt-0.5">{hint}</div>}
     </div>
   );

@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, ListChecks, FileText, MessageSquare, Brain, Gauge,
   Shield, Sparkles, FileBarChart, Plug, CreditCard, Settings as SettingsIcon,
-  ShieldCheck, Home, X, GaugeCircle, ChevronRight,
+  ShieldCheck, Home, X, GaugeCircle, ChevronRight, History, Swords,
 } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { useAppStore as useStore } from "@/lib/store";
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard, ListChecks, FileText, MessageSquare, Brain, Gauge,
   Shield, Sparkles, FileBarChart, Plug, CreditCard, Settings: SettingsIcon,
-  ShieldCheck, Home,
+  ShieldCheck, Home, History, Swords,
 };
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
@@ -58,12 +58,14 @@ function SidebarContent({
         {ADMIN_VIEWS.filter((v) => !["admin", "settings", "billing", "integrations"].includes(v.key)).map((v) => {
           const Icon = ICONS[v.icon] || FileText;
           const active = view === v.key;
-          const disabled = !currentAudit && !["admin"].includes(v.key);
+          // history & competitors views have their own data, so always enabled
+          const alwaysEnabled = ["admin", "history", "competitors"].includes(v.key);
+          const disabled = !currentAudit && !alwaysEnabled;
           return (
             <button
               key={v.key}
               onClick={() => setView(v.key)}
-              disabled={disabled && !["admin"].includes(v.key)}
+              disabled={disabled}
               className={cn(
                 "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-colors",
                 active ? "bg-primary text-primary-foreground shadow-sm" : "text-sidebar-foreground hover:bg-sidebar-accent",

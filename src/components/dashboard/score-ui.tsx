@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { AnimatedNumber } from "./animated-number";
 
-// Score ring — circular progress 0-100
+// Score ring — circular progress 0-100 with animated fill
 export function ScoreRing({
   value,
   size = 140,
@@ -11,6 +12,7 @@ export function ScoreRing({
   label,
   sublabel,
   color,
+  animate = true,
 }: {
   value: number;
   size?: number;
@@ -18,10 +20,29 @@ export function ScoreRing({
   label?: string;
   sublabel?: string;
   color?: string;
+  animate?: boolean;
 }) {
+  const [animatedValue, setAnimatedValue] = React.useState(animate ? 0 : value);
+
+  React.useEffect(() => {
+    if (!animate) { setAnimatedValue(value); return; }
+    const startTime = performance.now();
+    const start = 0;
+    const duration = 900;
+    let raf: number;
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - startTime) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setAnimatedValue(start + (value - start) * eased);
+      if (progress < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value, animate]);
+
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const offset = c - (Math.min(100, Math.max(0, value)) / 100) * c;
+  const offset = c - (Math.min(100, Math.max(0, animatedValue)) / 100) * c;
   const scoreColor = color || (value >= 80 ? "#10b981" : value >= 60 ? "#f59e0b" : value >= 40 ? "#f97316" : "#ef4444");
   return (
     <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
@@ -37,12 +58,12 @@ export function ScoreRing({
           strokeDasharray={c}
           strokeDashoffset={offset}
           strokeLinecap="round"
-          style={{ transition: "stroke-dashoffset 0.8s ease" }}
+          style={{ transition: animate ? "stroke-dashoffset 0.1s linear" : "none", filter: `drop-shadow(0 0 6px ${scoreColor}40)` }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-4xl font-bold tabular-nums" style={{ color: scoreColor }}>
-          {value}
+          <AnimatedNumber value={value} duration={900} />
         </span>
         {label && <span className="text-xs text-muted-foreground mt-1">{label}</span>}
         {sublabel && <span className="text-[10px] text-muted-foreground">{sublabel}</span>}

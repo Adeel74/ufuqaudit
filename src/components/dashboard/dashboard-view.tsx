@@ -7,6 +7,7 @@ import { ScoreRing, ScoreBar } from "./score-ui";
 import {
   TrendingUp, Sparkles, AlertOctagon, AlertTriangle, AlertCircle, Lightbulb,
   RefreshCw, Download, ChevronRight, Calendar, ArrowUp, ArrowDown, Bot,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -37,7 +38,21 @@ export function DashboardView() {
         icon={TrendingUp}
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={() => toast.info("Exporting PDF…")}>
+            <Button variant="outline" size="sm" onClick={() => {
+              if (!audit) { toast.error("No audit to export"); return; }
+              try {
+                (window as any).ufuqPrint?.({
+                  audit,
+                  agencyName: "UfuqAudit",
+                  clientName: audit.url,
+                  brandColor: "#10b981",
+                  templateId: "full",
+                });
+                toast.success("Report ready — use your browser's Save as PDF");
+              } catch {
+                toast.info("Exporting PDF…");
+              }
+            }}>
               <Download className="w-3.5 h-3.5 mr-1" /> Export
             </Button>
             <Button size="sm" onClick={() => { setView("landing"); }}>
@@ -87,12 +102,12 @@ export function DashboardView() {
           </h3>
           <div className="space-y-2.5">
             {[
-              { s: "critical" as const, n: audit.counts.critical, c: "text-red-600", bg: "bg-red-50" },
-              { s: "error" as const, n: audit.counts.error, c: "text-orange-600", bg: "bg-orange-50" },
-              { s: "warning" as const, n: audit.counts.warning, c: "text-amber-600", bg: "bg-amber-50" },
-              { s: "opportunity" as const, n: audit.counts.opportunity, c: "text-emerald-600", bg: "bg-emerald-50" },
-            ].map((p) => {
-              const Icon = p.s === "critical" ? AlertOctagon : p.s === "error" ? AlertTriangle : p.s === "warning" ? AlertCircle : Lightbulb;
+              { s: "critical" as const, n: audit.counts.critical, c: "text-red-600", bg: "bg-red-50", icon: AlertOctagon },
+              { s: "error" as const, n: audit.counts.error, c: "text-orange-600", bg: "bg-orange-50", icon: AlertTriangle },
+              { s: "warning" as const, n: audit.counts.warning, c: "text-amber-600", bg: "bg-amber-50", icon: AlertCircle },
+              { s: "opportunity" as const, n: audit.counts.opportunity, c: "text-emerald-600", bg: "bg-emerald-50", icon: Lightbulb },
+            ].filter((p) => p.n > 0).map((p) => {
+              const Icon = p.icon;
               return (
                 <button
                   key={p.s}
@@ -105,6 +120,12 @@ export function DashboardView() {
                 </button>
               );
             })}
+            {audit.counts.critical + audit.counts.error + audit.counts.warning + audit.counts.opportunity === 0 && (
+              <div className="text-center py-8 text-sm text-muted-foreground">
+                <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
+                No issues found — your site is in great shape!
+              </div>
+            )}
           </div>
         </Card>
 

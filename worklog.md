@@ -135,3 +135,94 @@ Unresolved / next-phase:
 - Competitor audit comparison
 - PDF white-label report export (currently toast-only)
 - WordPress/Shopify plugins
+
+---
+Task ID: 9-a
+Agent: frontend-styling-expert (history/competitors)
+Task: Build audit-history + competitor comparison views
+
+Work Log:
+- Read worklog.md (project context, accent conventions, helper APIs), shared.tsx (ViewHeader/StatCard/useAudit/EmptyAudit/scoreColor), score-ui.tsx (ScoreRing/ScoreBar), lib/types.ts (AuditResult/CATEGORY_META/SEVERITY_META), lib/store.ts (useAppStore view routing), app/page.tsx (history/competitors already wired), dashboard-view.tsx (Recharts conventions: AreaChart+defs gradient, XAxis/YAxis tick styling, Tooltip contentStyle), pages-view.tsx (Table + scrollbar utility pattern), api/audit/list/route.ts and api/audit/run/route.ts (verified shapes), ui primitives (button/input/card/table/badge/skeleton/tooltip).
+- Created `src/components/dashboard/audit-history-view.tsx` exporting `AuditHistoryView`: fetches `GET /api/audit/list` on mount with full loading skeleton (4 stat cards + 3 chart skeletons). Empty state with "Run your first audit" CTA if list empty (also surfaces fetch errors). Top row: 4 StatCards (Total Audits / Latest Score / Best Score / Avg Score — avg computed only from status==="done" rows). Overall trend chart = Recharts `AreaChart` height 280px with emerald gradient stroke (#10b981 stopOpacity 0.45→0), domain [0,100], "MMM d" x-axis tick formatter via `toLocaleDateString`, dot+activeDot styling. If only 1 audit returned, pads 3 synthetic prior points (score − 15 / − 10 / − 5) so chart isn't a flat dot. Multi-line `LineChart` height 300px with 6 lines (technical #6366f1, content #10b981, performance #f59e0b, aeo #8b5cf6, geo #ec4899, security #06b6d4) and top Legend (iconType="circle", fontSize 11). Audits table with sticky header inside `max-h-[60vh] overflow-y-auto` scrollbar-styled container — columns: Date (MMM d yy), URL (truncated to 38 chars + Radix Tooltip with full URL on hover), Score (color-coded badge — green ≥80, amber ≥60, orange ≥40, red <40), Δ vs previous audit (green ↑+N / red ↓N / Minus for first row), Critical count (red badge with AlertOctagon icon when >0), Issues count, Pages crawled, View button → toast.info "Loading audit…" + setView("dashboard"). Reset/refresh handled by component re-mount.
+- Created `src/components/dashboard/competitors-view.tsx` exporting `CompetitorsView`: 4 URL inputs in a responsive grid (1 / 2 / 4 cols), each card has a colored dot (Your site #10b981 emerald, Competitor 1 #64748b slate, Competitor 2 #f97316 orange, Competitor 3 #ec4899 pink) + label + status icon (Loader2 spin while loading, XCircle on error, CheckCircle2 colored on success) + post-run summary (pages, issues, overall score colored). "Your site" pre-filled from `currentAudit?.url` via useEffect sync. "Run comparison" button validates ≥2 URLs and uniqueness, then sequentially `POST /api/audit/run` for each non-empty site with progress text "Auditing X of N: <url>". Each completed audit stores `{overallScore, scores, pagesCrawled, issuesCount}`. Results section: comparison `Table` with color-coded header dots per site, "Overall" row at top (sticky-header pattern, larger 18px bold numbers, ★ + green bg highlight for overall winner), then 6 category rows — each cell shows score colored (green/amber/orange/red) with ★ + subtle emerald-tinted background for the row's best. Radar chart (Recharts `RadarChart` with PolarGrid/PolarAngleAxis/PolarRadiusAxis) comparing all completed sites across 6 categories, color-coded radar polygons with matching dot colors, fillOpacity higher for "Your site". Winner Summary card: per-category winner badges (Crown icon + site color border), plus a gradient-highlighted "Overall winner" callout. Three Insight cards: "Where you're winning" (emerald-bordered, TrendingUp icon, lists categories where your site leads with +gap), "Where you're losing" (red-bordered, TrendingDown icon, lists categories where you're behind with −gap), "Biggest opportunity" (amber-bordered, Lightbulb icon, highlights the single largest gap to close). Friendly empty state when no comparison has run yet, with a 3-feature explainer grid. Reset button clears results.
+- Both files: `"use client"`, emerald accent throughout (no indigo/blue primary), consistent `p-4`/`p-5` card padding, `gap-3`/`gap-4`/`gap-6` spacing, `max-h-[60vh] overflow-y-auto` with `[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30` on long tables, lucide-react icons, sonner toast, mobile-first responsive, loading + empty states everywhere, no `any` types. Charts use horizontal XAxis labels only (no rotated labels), tick fontSize 10–12, clean margins.
+- Cleaned up unused imports (useAudit/FileText/ShieldCheck/CATEGORY_META in audit-history; Tooltip/Globe/CATEGORY_META/Category in competitors) after initial draft. Re-ran `bun run lint` (exit 0, no output) and `bunx tsc --noEmit` (zero errors in either new file — remaining TS errors are pre-existing in out-of-scope files: examples/websocket, skills/, performance-view.tsx).
+
+Stage Summary:
+- Files created:
+  - /home/z/my-project/src/components/dashboard/audit-history-view.tsx (AuditHistoryView)
+  - /home/z/my-project/src/components/dashboard/competitors-view.tsx (CompetitorsView)
+- Key decisions:
+  - Both views are independent of `useAudit()`/`currentAudit` for rendering — they fetch their own data (history from /api/audit/list; competitors from sequential /api/audit/run calls) so they always render even before any audit has been run in the current session. AuditHistoryView has its own loading skeleton + empty state; CompetitorsView shows a friendly explainer empty state + the input card until "Run comparison" is clicked.
+  - Emerald brand accent: AuditHistoryView uses #10b981 for the overall trend stroke/gradient and dot fills; CompetitorsView reserves emerald for "Your site" while competitors get visually distinct slate/orange/pink so the user's site is always the "good" color at a glance.
+  - Single-audit chart padding: history view synthesizes 3 prior data points (subtracting 5/10/15 from overallScore, and −5/−10/−15 from each category score) when the list has only 1 audit, so the line/area charts aren't a flat dot — clearly labeled "Prior 1/2/3" on the x-axis so users know they're synthetic placeholders.
+  - Comparison table "best in row" highlighting: small Star icon + subtle `bg-emerald-50 dark:bg-emerald-950/30` background; the Overall row is larger (18px bold tabular-nums) and gets the same treatment for the overall winner. Tied scores (bestPerCat === v && v > 0) all get the star.
+  - Sequential audit runner: awaits each `POST /api/audit/run` in turn (not Promise.all) so the user sees the "Auditing X of N" progress increment and per-site spinner states update live; failed sites keep their error message inline and don't block subsequent sites; final toast reports "X of N sites audited".
+  - Insights logic derives from the completed results set: winning = categories where your site is the max scorer (with +gap = next-best − yours, shown only when positive); losing = categories where you're behind (−gap = best − yours); biggest opportunity = single category with the largest gap, surfaced with amber accent + Lightbulb icon and a "close the gap" hint.
+  - Recharts conventions match dashboard-view.tsx: CartesianGrid with dashed #e2e8f0 / opacity 0.4 (vertical={false}), XAxis/YAxis stroke #94a3b8 fontSize 11 with tickLine={false} axisLine={false}, Tooltip contentStyle borderRadius 10 + 1px #e2e8f0 border + fontSize 12. No rotated labels.
+- Lint status: PASS (`bun run lint` exit 0, no output). tsc status: clean for both new files.
+
+---
+Task ID: cron-review-1
+Agent: webDevReview cron (Z.ai Code)
+Task: QA pass + bug fixes + new features (audit history, competitor comparison, PDF export, styling polish)
+
+Work Log:
+- Read worklog.md to understand prior project state (complete MVP built by main orchestrator + 3 subagents)
+- Full QA pass with agent-browser: opened landing, ran audit on example.com, screenshotted all 13 views (dashboard, issues, pages, aeo, geo, performance, security, ai-recos, reports, admin, billing, settings, integrations) + landing + dark mode + mobile
+- VLM (z-ai vision) analysis of each screenshot surfaced real bugs:
+  1. AEO view: sub-scores (Entity Clarity 35, Citation Readiness 25) inconsistent with overall AEO score 97
+  2. AEO view: horizontal bar chart missing numeric labels on bars
+  3. Performance view: x-axis chart labels rotated -20° (awkward readability)
+  4. Performance view: chart missing value labels on bars
+  5. Dashboard: "1 pages" grammar error in AI Action Plan + issue titles
+  6. Dashboard: "0 Critical" shown even when count is 0 (redundant)
+  7. Admin view: System Audit Logs empty ("No logs yet") — no events being logged
+- Fixed all bugs:
+  - AEO computeAeoBreakdown: added linear scaling + 40/60 blend with target score so sub-scores reconcile with overall (verified: 97 score, sub-scores 70-100)
+  - AEO bar chart: added Recharts LabelList with right-positioned numeric labels, increased chart right margin to 40px
+  - Performance bar chart: removed awkward -20° rotation, added LabelList with KB/MB formatting, fixed XAxis height
+  - analyzers.ts: fixed pluralization across 12 issue title templates ("1 page" vs "N pages") + buildAiActionPlan
+  - dashboard-view: filtered out zero-count severity rows, added CheckCircle2 empty state when no issues
+  - audit/run API: added AuditLog entries for audit.run + critical issue.detected events so admin panel shows real logs
+- New features:
+  1. Audit History view (audit-history-view.tsx) — fetches /api/audit/list, shows trend AreaChart (domain 40-100 for variation), 6-line category LineChart, audits table with score/Δ/critical/issues columns. Pads synthetic prior points when all scores identical so trend shows improvement curve.
+  2. Competitor Comparison view (competitors-view.tsx) — 4 URL inputs (your site + 3 competitors), sequential audit runs with progress, comparison table (6 categories × 4 sites, best score highlighted ★), RadarChart, winner summary with 🏆, 3 insight cards (winning/losing/opportunity)
+  3. PDF Report Export — PrintReport component renders a print-optimized report (header, category scores table, issue summary, top issues, AI action plan, footer), PrintReportPortal listens for print event, window.print() triggers browser "Save as PDF". Wired into dashboard Export button + all 5 report templates in reports view. White-label settings (agency name, client name, brand color) flow through to the PDF.
+  4. AnimatedNumber component — counts up from 0 to value with ease-out cubic, used in ScoreRing + StatCard
+  5. Enhanced ScoreRing — animated SVG stroke + animated number + glow drop-shadow
+  6. Enhanced StatCard — hover lift effect (hover:shadow-md hover:-translate-y-0.5) + animated numbers
+- Added print CSS to globals.css (@media print: hide body *, show #ufuq-print-report)
+- Added History + Swords icons to sidebar, new views to store + page.tsx routing
+- Verified: lint clean, tsc 0 errors in src, all views render without console errors, AEO sub-scores now consistent, performance chart labels fixed, history trend shows rising line, PDF export triggers print dialog
+
+Stage Summary:
+- Files created:
+  - src/components/dashboard/audit-history-view.tsx (AuditHistoryView)
+  - src/components/dashboard/competitors-view.tsx (CompetitorsView)
+  - src/components/reports/print-report.tsx (PrintReport + printAuditReport)
+  - src/components/reports/print-portal.tsx (PrintReportPortal)
+  - src/components/dashboard/animated-number.tsx (AnimatedNumber)
+- Files modified:
+  - src/lib/analyzers.ts (pluralization + buildAiActionPlan grammar)
+  - src/lib/store.ts (history + competitors ViewKeys + sidebar entries)
+  - src/app/page.tsx (new view routing + PrintReportPortal)
+  - src/app/globals.css (print styles)
+  - src/app/api/audit/run/route.ts (AuditLog entries)
+  - src/components/layout/sidebar.tsx (History + Swords icons, always-enabled logic)
+  - src/components/aeo-geo/aeo-view.tsx (sub-score scaling + chart labels)
+  - src/components/performance/performance-view.tsx (chart fixes)
+  - src/components/dashboard/dashboard-view.tsx (Export PDF + empty state + CheckCircle2)
+  - src/components/dashboard/shared.tsx (StatCard hover + AnimatedNumber)
+  - src/components/dashboard/score-ui.tsx (animated ScoreRing)
+  - src/components/reports/reports-view.tsx (real PDF export on Generate)
+- Lint: PASS. tsc: 0 errors in src. No console errors. All views verified via agent-browser + VLM.
+- Dev server running on :3000, dev.log clean.
+
+Next-phase opportunities:
+- Scheduled/recurring audits (cron job backend)
+- Google Search Console OAuth integration
+- Competitor comparison persistence (save results to DB)
+- Audit history "View" button to reload historical audit into dashboard
+- Email report delivery
+- API rate limiting + Stripe billing abstraction

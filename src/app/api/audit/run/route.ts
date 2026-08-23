@@ -90,6 +90,30 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Audit log entry
+    await db.auditLog.create({
+      data: {
+        userId: user.id,
+        action: "audit.run",
+        entity: "audit",
+        entityId: auditRow.id,
+        details: `Audited ${url} — score ${result.overall}/100 (${crawlRes.pages.length} pages, ${result.issues.length} issues)`,
+      },
+    }).catch(() => {});
+
+    // Issue creation logs (only for critical)
+    for (const issue of result.issues.filter((i) => i.severity === "critical").slice(0, 5)) {
+      await db.auditLog.create({
+        data: {
+          userId: user.id,
+          action: "issue.detected",
+          entity: "issue",
+          entityId: auditRow.id,
+          details: `Critical: ${issue.title}`,
+        },
+      }).catch(() => {});
+    }
+
     const prev = await db.audit.findMany({
       where: { userId: user.id, status: "done" },
       orderBy: { createdAt: "asc" },

@@ -7,6 +7,8 @@ import { AuditProgressView } from "@/components/landing/audit-progress";
 import { DashboardView } from "@/components/dashboard/dashboard-view";
 import { IssuesView } from "@/components/issues/issues-view";
 import { PagesView } from "@/components/dashboard/pages-view";
+import { AuditHistoryView } from "@/components/dashboard/audit-history-view";
+import { CompetitorsView } from "@/components/dashboard/competitors-view";
 import { AeoView } from "@/components/aeo-geo/aeo-view";
 import { GeoView } from "@/components/aeo-geo/geo-view";
 import { PerformanceView } from "@/components/performance/performance-view";
@@ -21,6 +23,7 @@ import { PricingView } from "@/components/landing/pricing-view";
 import { Sidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/topbar";
 import { Footer } from "@/components/layout/footer";
+import { PrintReportPortal } from "@/components/reports/print-portal";
 import {
   LayoutDashboard, ListChecks, FileText, MessageSquare, Brain, Gauge,
   Shield, Sparkles, FileBarChart, Plug, CreditCard, Settings as SettingsIcon,
@@ -32,7 +35,7 @@ import { Button } from "@/components/ui/button";
 const ICONS: Record<string, React.ComponentType<{ className?: string; size?: number }>> = {
   LayoutDashboard, ListChecks, FileText, MessageSquare, Brain, Gauge,
   Shield, Sparkles, FileBarChart, Plug, CreditCard, Settings: SettingsIcon,
-  ShieldCheck, Home,
+  ShieldCheck,
 };
 
 export default function Home() {
@@ -71,6 +74,8 @@ export default function Home() {
       case "dashboard": return <DashboardView />;
       case "issues": return <IssuesView />;
       case "pages": return <PagesView />;
+      case "history": return <AuditHistoryView />;
+      case "competitors": return <CompetitorsView />;
       case "aeo": return <AeoView />;
       case "geo": return <GeoView />;
       case "performance": return <PerformanceView />;
@@ -104,7 +109,7 @@ export default function Home() {
         {/* Main content */}
         <main className="flex-1 min-w-0 overflow-x-hidden">
           <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-            {currentAudit || view === "admin" || view === "settings" || view === "billing" || view === "integrations" || view === "reports" ? (
+            {currentAudit || view === "admin" || view === "settings" || view === "billing" || view === "integrations" || view === "reports" || view === "history" || view === "competitors" ? (
               renderView()
             ) : (
               <EmptyState onRun={() => setView("landing")} />
@@ -113,6 +118,7 @@ export default function Home() {
           <Footer />
         </main>
       </div>
+      <PrintReportPortal />
     </div>
   );
 }

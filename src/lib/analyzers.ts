@@ -122,7 +122,7 @@ function checkTechnical(pages: PageData[], crawl: CrawlResult): IssueData[] {
       category: "technical",
       severity: "warning",
       issueType: "canonical_missing",
-      title: `${noCanonical.length} pages missing canonical tag`,
+      title: `${noCanonical.length === 1 ? "1 page" : `${noCanonical.length} pages`} missing canonical tag`,
       description: "Canonical tags tell search engines the preferred version of a page. Missing them risks duplicate-content issues.",
       impact: "medium",
       recommendation: "Add a self-referencing <link rel=\"canonical\"> to every page.",
@@ -142,7 +142,7 @@ function checkOnPage(pages: PageData[]): IssueData[] {
       category: "on_page",
       severity: "error",
       issueType: "missing_title",
-      title: `${missingTitle.length} pages missing <title>`,
+      title: `${missingTitle.length === 1 ? "1 page" : `${missingTitle.length} pages`} missing <title>`,
       description: "Title tags are a primary ranking signal and appear as the clickable headline in search results.",
       impact: "high",
       recommendation: "Add a unique, descriptive <title> (50–60 chars) to each page containing the target keyword near the start.",
@@ -169,7 +169,7 @@ function checkOnPage(pages: PageData[]): IssueData[] {
       category: "on_page",
       severity: "warning",
       issueType: "missing_meta_description",
-      title: `${missingDesc.length} pages missing meta description`,
+      title: `${missingDesc.length === 1 ? "1 page" : `${missingDesc.length} pages`} missing meta description`,
       description: "Meta descriptions influence the snippet shown in search results and can improve CTR. Missing them means search engines auto-generate snippets.",
       impact: "medium",
       recommendation: "Write a unique 140–160 character meta description per page that summarizes the content and includes a CTA.",
@@ -196,7 +196,7 @@ function checkOnPage(pages: PageData[]): IssueData[] {
       category: "on_page",
       severity: "error",
       issueType: "missing_h1",
-      title: `${missingH1.length} pages missing H1`,
+      title: `${missingH1.length === 1 ? "1 page" : `${missingH1.length} pages`} missing H1`,
       description: "The H1 is the main heading and a strong on-page signal. Every indexable page should have exactly one H1.",
       impact: "high",
       recommendation: "Add a single, descriptive H1 to each page containing the target keyword.",
@@ -254,7 +254,7 @@ function checkOnPage(pages: PageData[]): IssueData[] {
       category: "on_page",
       severity: "opportunity",
       issueType: "missing_og",
-      title: `${noOg.length} pages missing Open Graph tags`,
+      title: `${noOg.length === 1 ? "1 page" : `${noOg.length} pages`} missing Open Graph tags`,
       description: "Open Graph tags control how your page looks when shared on social media and some AI platforms.",
       impact: "low",
       recommendation: "Add og:title, og:description, og:image and og:url to every shareable page.",
@@ -273,7 +273,7 @@ function checkContent(pages: PageData[]): IssueData[] {
       category: "content",
       severity: "warning",
       issueType: "thin_content",
-      title: `${thin.length} pages have thin content (< 300 words)`,
+      title: `${thin.length === 1 ? "1 page has" : `${thin.length} pages have`} thin content (< 300 words)`,
       description: "Thin pages provide little value and struggle to rank. They are also poor sources for AI answer engines.",
       impact: "medium",
       recommendation: "Expand thin pages with original insights, examples, data and FAQs. Aim for comprehensive coverage of the topic.",
@@ -287,7 +287,7 @@ function checkContent(pages: PageData[]): IssueData[] {
       category: "content",
       severity: "error",
       issueType: "very_thin_content",
-      title: `${veryThin.length} pages extremely thin (< 150 words)`,
+      title: `${veryThin.length === 1 ? "1 page is" : `${veryThin.length} pages are`} extremely thin (< 150 words)`,
       description: "These pages are essentially empty and waste crawl budget.",
       impact: "high",
       recommendation: "Either expand substantially or consolidate/redirect to a stronger page.",
@@ -307,7 +307,7 @@ function checkInternalLinks(pages: PageData[]): IssueData[] {
       category: "internal_links",
       severity: "warning",
       issueType: "orphan_pages",
-      title: `${orphan.length} pages have few internal links`,
+      title: `${orphan.length === 1 ? "1 page has" : `${orphan.length} pages have`} few internal links`,
       description: "Pages with few inbound internal links receive little link equity and may be deprioritized by crawlers.",
       impact: "medium",
       recommendation: "Add contextual internal links from related, high-authority pages to these URLs using descriptive anchor text.",
@@ -341,7 +341,7 @@ function checkSchema(pages: PageData[]): IssueData[] {
       category: "schema",
       severity: "warning",
       issueType: "schema_missing",
-      title: `${noSchema.length} pages missing structured data (JSON-LD)`,
+      title: `${noSchema.length === 1 ? "1 page" : `${noSchema.length} pages`} missing structured data (JSON-LD)`,
       description: "Structured data helps search engines and AI models understand entities on your page (Organization, Article, FAQ, etc.).",
       impact: "medium",
       recommendation: "Add JSON-LD schema for Organization, WebSite, WebPage, Article, BreadcrumbList and FAQ where applicable.",
@@ -355,7 +355,7 @@ function checkSchema(pages: PageData[]): IssueData[] {
       category: "schema",
       severity: "opportunity",
       issueType: "faq_schema_missing",
-      title: `${noFaq.length} content pages missing FAQ schema`,
+      title: `${noFaq.length === 1 ? "1 content page" : `${noFaq.length} content pages`} missing FAQ schema`,
       description: "FAQ schema helps your Q&A pairs appear as rich results and get cited by answer engines.",
       impact: "medium",
       recommendation: "Identify questions your page answers and add FAQPage JSON-LD with concise Q&A pairs.",
@@ -374,7 +374,7 @@ function checkAeo(pages: PageData[]): IssueData[] {
       category: "aeo",
       severity: "warning",
       issueType: "no_faq_format",
-      title: `${noFaq.length} pages lack FAQ / Q&A format`,
+      title: `${noFaq.length === 1 ? "1 page lacks" : `${noFaq.length} pages lack`} FAQ / Q&A format`,
       description: "Answer engines (ChatGPT, Perplexity, Google AI Overviews) prefer content structured as question + concise answer.",
       impact: "high",
       recommendation: "Add a FAQ section with explicit questions and 40–55 word direct answers near the top of important pages.",
@@ -387,7 +387,7 @@ function checkAeo(pages: PageData[]): IssueData[] {
       category: "aeo",
       severity: "opportunity",
       issueType: "weak_answer_depth",
-      title: `${thinAnswer.length} pages have shallow answer depth`,
+      title: `${thinAnswer.length === 1 ? "1 page has" : `${thinAnswer.length} pages have`} shallow answer depth`,
       description: "AI engines look for self-contained, citable answers. Pages under 600 words rarely provide enough depth.",
       impact: "medium",
       recommendation: "Expand each page with a clear direct answer, supporting context, and original data or examples.",
@@ -490,7 +490,7 @@ function checkPerformance(pages: PageData[]): IssueData[] {
       category: "performance",
       severity: "error",
       issueType: "slow_lcp",
-      title: `${slow.length} pages have LCP > 2.5s`,
+      title: `${slow.length === 1 ? "1 page has" : `${slow.length} pages have`} LCP > 2.5s`,
       description: "Largest Contentful Paint over 2.5s is poor for Core Web Vitals and affects rankings.",
       impact: "high",
       recommendation: "Optimize the largest above-the-fold element: preload hero images, compress, use modern formats (WebP/AVIF), reduce server response time (TTFB).",
@@ -504,7 +504,7 @@ function checkPerformance(pages: PageData[]): IssueData[] {
       category: "performance",
       severity: "warning",
       issueType: "large_page_weight",
-      title: `${heavy.length} pages exceed 500 KB`,
+      title: `${heavy.length === 1 ? "1 page exceeds" : `${heavy.length} pages exceed`} 500 KB`,
       description: "Heavy pages hurt LCP and INP, especially on mobile networks.",
       impact: "medium",
       recommendation: "Lazy-load images, minify CSS/JS, remove unused code, and compress assets with Brotli.",
@@ -620,20 +620,21 @@ export function buildAiActionPlan(issues: IssueData[]): string[] {
   const opps = issues.filter((i) => i.severity === "opportunity");
 
   const byType = (arr: IssueData[], t: string) => arr.filter((i) => i.issueType === t);
+  const plural = (n: number, w: string) => n === 1 ? `1 ${w}` : `${n} ${w}s`;
 
   if (byType(critical, "ai_crawler_blocked").length) plan.push("Unblock AI crawlers (GPTBot, ClaudeBot, PerplexityBot) in robots.txt to be cited by answer engines.");
   if (byType(critical, "no_https").length || byType(critical, "no_https_security").length) plan.push("Migrate the entire site to HTTPS with a 301 redirect and enable HSTS.");
-  if (byType(critical, "page_noindex").length) plan.push(`Remove noindex from ${byType(critical, "page_noindex").length} important pages so they can be indexed.`);
+  if (byType(critical, "page_noindex").length) plan.push(`Remove noindex from ${plural(byType(critical, "page_noindex").length, "important page")} so they can be indexed.`);
   if (byType(critical, "missing_viewport").length) plan.push("Add the viewport meta tag for mobile-first rendering.");
-  if (byType(errors, "missing_title").length) plan.push(`Write unique <title> tags for ${byType(errors, "missing_title").length} pages.`);
-  if (byType(errors, "missing_h1").length) plan.push(`Add an H1 to ${byType(errors, "missing_h1").length} pages.`);
+  if (byType(errors, "missing_title").length) plan.push(`Write unique <title> tags for ${plural(byType(errors, "missing_title").length, "page")}.`);
+  if (byType(errors, "missing_h1").length) plan.push(`Add an H1 to ${plural(byType(errors, "missing_h1").length, "page")}.`);
   if (byType(errors, "broken_internal_links").length) plan.push("Fix broken internal links or redirect them to live URLs.");
-  if (byType(warnings, "missing_meta_description").length) plan.push(`Generate meta descriptions for ${byType(warnings, "missing_meta_description").length} pages.`);
+  if (byType(warnings, "missing_meta_description").length) plan.push(`Generate meta descriptions for ${plural(byType(warnings, "missing_meta_description").length, "page")}.`);
   if (byType(warnings, "schema_missing").length) plan.push("Add Organization + WebSite + WebPage JSON-LD schema.");
   if (byType(warnings, "no_faq_format").length) plan.push("Add FAQ sections with concise Q&A answers to key pages.");
   if (byType(opps, "faq_schema_missing").length) plan.push("Add FAQPage schema to content-rich pages.");
   if (byType(opps, "weak_citation_readiness").length) plan.push("Add quotable definitions, stats and takeaways for AI citation readiness.");
-  if (byType(errors, "slow_lcp").length) plan.push(`Improve LCP on ${byType(errors, "slow_lcp").length} slow pages (preload hero image, reduce TTFB).`);
+  if (byType(errors, "slow_lcp").length) plan.push(`Improve LCP on ${plural(byType(errors, "slow_lcp").length, "slow page")} (preload hero image, reduce TTFB).`);
 
   return plan.slice(0, 7);
 }

@@ -11,6 +11,8 @@ export type ViewKey =
   | "dashboard"
   | "issues"
   | "pages"
+  | "history"
+  | "competitors"
   | "aeo"
   | "geo"
   | "performance"
@@ -64,6 +66,8 @@ export const ADMIN_VIEWS: { key: ViewKey; label: string; icon: string }[] = [
   { key: "dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { key: "issues", label: "Issues", icon: "ListChecks" },
   { key: "pages", label: "Pages", icon: "FileText" },
+  { key: "history", label: "Audit History", icon: "History" },
+  { key: "competitors", label: "Competitors", icon: "Swords" },
   { key: "aeo", label: "AEO", icon: "MessageSquare" },
   { key: "geo", label: "GEO / AI Visibility", icon: "Brain" },
   { key: "performance", label: "Performance", icon: "Gauge" },

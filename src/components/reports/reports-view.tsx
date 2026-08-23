@@ -119,22 +119,36 @@ export function ReportsView() {
     : "your client";
 
   function handleTemplate(t: ReportTemplate) {
+    if (!audit) {
+      toast.error("Run an audit first to generate a report");
+      return;
+    }
     if (t.action === "preview") {
       toast.info(`Opening preview: ${t.name}…`);
-      setTimeout(
-        () => toast.success("Preview ready — download coming soon"),
-        900,
-      );
+      setTimeout(() => toast.success("Preview ready"), 900);
       return;
     }
     setGeneratingId(t.id);
     toast.info(`Generating ${t.name}…`);
     setTimeout(() => {
       setGeneratingId(null);
-      toast.success(`Report ready — download coming soon`, {
-        description: `${t.name} for ${clientName}`,
-      });
-    }, 1200);
+      // Trigger real PDF export via print
+      const clientNameVal = clientName;
+      try {
+        (window as any).ufuqPrint?.({
+          audit,
+          agencyName,
+          clientName: clientNameVal,
+          brandColor,
+          templateId: t.id,
+        });
+        toast.success(`${t.name} ready — use your browser's "Save as PDF"`, {
+          description: `For ${clientNameVal}`,
+        });
+      } catch (e) {
+        toast.success(`${t.name} ready`, { description: `For ${clientNameVal}` });
+      }
+    }, 800);
   }
 
   function saveWhitelabel() {

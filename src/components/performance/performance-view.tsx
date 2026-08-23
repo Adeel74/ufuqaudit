@@ -11,7 +11,7 @@ import {
 import { ScoreRing } from "@/components/dashboard/score-ui";
 import { Card } from "@/components/ui/card";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList,
 } from "recharts";
 import type { PageData } from "@/lib/types";
 
@@ -272,9 +272,7 @@ export function PerformanceView() {
                     fontSize={10}
                     tickLine={false}
                     axisLine={false}
-                    angle={-20}
-                    textAnchor="end"
-                    height={60}
+                    height={50}
                     interval={0}
                   />
                   <YAxis
@@ -305,6 +303,12 @@ export function PerformanceView() {
                         fillOpacity={0.4 + (p.size > 1000 ? 0.6 : p.size / 1000 * 0.6)}
                       />
                     ))}
+                    <LabelList
+                      dataKey="size"
+                      position="top"
+                      formatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}MB` : `${v}KB`}
+                      style={{ fontSize: 9, fontWeight: 600, fill: "#94a3b8" }}
+                    />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
