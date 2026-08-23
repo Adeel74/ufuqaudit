@@ -120,10 +120,10 @@ export function DashboardView() {
           </h3>
           <div className="space-y-2.5">
             {[
-              { s: "critical" as const, n: audit.counts.critical, c: "text-red-600", bg: "bg-red-50", icon: AlertOctagon },
-              { s: "error" as const, n: audit.counts.error, c: "text-orange-600", bg: "bg-orange-50", icon: AlertTriangle },
-              { s: "warning" as const, n: audit.counts.warning, c: "text-amber-600", bg: "bg-amber-50", icon: AlertCircle },
-              { s: "opportunity" as const, n: audit.counts.opportunity, c: "text-emerald-600", bg: "bg-emerald-50", icon: Lightbulb },
+              { s: "critical" as const, n: audit.counts.critical, c: "text-red-600 dark:text-red-400", bg: "bg-red-50 dark:bg-red-950/30", icon: AlertOctagon },
+              { s: "error" as const, n: audit.counts.error, c: "text-orange-600 dark:text-orange-400", bg: "bg-orange-50 dark:bg-orange-950/30", icon: AlertTriangle },
+              { s: "warning" as const, n: audit.counts.warning, c: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/30", icon: AlertCircle },
+              { s: "opportunity" as const, n: audit.counts.opportunity, c: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30", icon: Lightbulb },
             ].filter((p) => p.n > 0).map((p) => {
               const Icon = p.icon;
               return (

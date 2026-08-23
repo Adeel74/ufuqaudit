@@ -6,7 +6,7 @@ import {
   LayoutDashboard, ListChecks, FileText, MessageSquare, Brain, Gauge,
   Shield, Sparkles, FileBarChart, Plug, CreditCard, Settings as SettingsIcon,
   ShieldCheck, Home, X, GaugeCircle, ChevronRight, History, Swords, Bot, Wrench,
-  Search, Link2, PenLine, Network, CalendarClock, Share2,
+  Search, Link2, PenLine, Network, CalendarClock, Share2, BarChart3, Mail,
 } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { useAppStore as useStore } from "@/lib/store";
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard, ListChecks, FileText, MessageSquare, Brain, Gauge,
   Shield, Sparkles, FileBarChart, Plug, CreditCard, Settings: SettingsIcon,
-  ShieldCheck, Home, History, Swords, Bot, Wrench, Search, Link2, PenLine, Network, CalendarClock, Share2,
+  ShieldCheck, Home, History, Swords, Bot, Wrench, Search, Link2, PenLine, Network, CalendarClock, Share2, BarChart3, Mail,
 };
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
@@ -60,7 +60,7 @@ function SidebarContent({
           const Icon = ICONS[v.icon] || FileText;
           const active = view === v.key;
           // history, competitors, ai-chat, tools have their own data, so always enabled
-          const alwaysEnabled = ["admin", "history", "competitors", "ai-chat", "tools", "keywords", "backlinks", "content", "link-graph", "scheduled", "portal"].includes(v.key);
+          const alwaysEnabled = ["admin", "history", "competitors", "ai-chat", "tools", "keywords", "backlinks", "content", "link-graph", "scheduled", "portal", "search-console", "email"].includes(v.key);
           const disabled = !currentAudit && !alwaysEnabled;
           return (
             <button

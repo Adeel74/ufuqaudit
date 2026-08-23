@@ -1,0 +1,868 @@
+     1→"use client";
+     2→
+     3→import * as React from "react";
+     4→import { ViewHeader, StatCard } from "@/components/dashboard/shared";
+     5→import { useAppStore } from "@/lib/store";
+     6→import { Button } from "@/components/ui/button";
+     7→import { Card } from "@/components/ui/card";
+     8→import { Input } from "@/components/ui/input";
+     9→import { Badge } from "@/components/ui/badge";
+    10→import { Skeleton } from "@/components/ui/skeleton";
+    11→import { Label } from "@/components/ui/label";
+    12→import { Separator } from "@/components/ui/separator";
+    13→import {
+    14→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    15→} from "@/components/ui/table";
+    16→import {
+    17→  Tooltip, TooltipTrigger, TooltipContent,
+    18→} from "@/components/ui/tooltip";
+    19→import {
+    20→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
+    21→} from "@/components/ui/dialog";
+    22→import {
+    23→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    24→} from "@/components/ui/select";
+    25→import {
+    26→  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+    27→  DropdownMenuSeparator, DropdownMenuTrigger,
+    28→} from "@/components/ui/dropdown-menu";
+    29→import {
+    30→  AlertDialog, AlertDialogAction, AlertDialogCancel,
+    31→  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+    32→  AlertDialogHeader, AlertDialogTitle,
+    33→} from "@/components/ui/alert-dialog";
+    34→import {
+    35→  Share2, Plus, Loader2, MoreHorizontal, Copy, ExternalLink,
+    36→  Ban, Eye, Link as LinkIcon, Users, Gauge, CheckCircle2,
+    37→} from "lucide-react";
+    38→import { toast } from "sonner";
+    39→import { cn } from "@/lib/utils";
+    40→
+    41→// ---------- Types ----------
+    42→interface PortalLink {
+    43→  id: string;
+    44→  token: string;
+    45→  clientName: string;
+    46→  clientEmail: string;
+    47→  auditUrl: string;
+    48→  overallScore: number;
+    49→  createdAt: string;
+    50→  expiresAt: string | null;
+    51→  views: number;
+    52→  lastViewedAt: string | null;
+    53→  branding: {
+    54→    agencyName: string;
+    55→    primaryColor: string;
+    56→    logoUrl: string | null;
+    57→  };
+    58→}
+    59→
+    60→interface PortalCreateBody {
+    61→  clientName: string;
+    62→  clientEmail: string;
+    63→  auditUrl: string;
+    64→  overallScore: number;
+    65→  expiresInDays: number; // 0 = never
+    66→  agencyName: string;
+    67→  primaryColor: string;
+    68→}
+    69→
+    70→// ---------- Constants ----------
+    71→const EMERALD = "#10b981";
+    72→const TEAL_DARK = "#0f766e";
+    73→const EMERALD_BTN = "bg-emerald-600 hover:bg-emerald-700 text-white";
+    74→
+    75→const SCROLLBAR_CLS =
+    76→  "max-h-[60vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 " +
+    77→  "[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 " +
+    78→  "[&::-webkit-scrollbar-track]:bg-transparent";
+    79→
+    80→const BRAND_SWATCHES: { name: string; value: string; ring: string }[] = [
+    81→  { name: "Emerald", value: "#10b981", ring: "ring-emerald-500" },
+    82→  { name: "Teal", value: "#14b8a6", ring: "ring-teal-500" },
+    83→  { name: "Amber", value: "#f59e0b", ring: "ring-amber-500" },
+    84→  { name: "Rose", value: "#f43f5e", ring: "ring-rose-500" },
+    85→  { name: "Violet", value: "#8b5cf6", ring: "ring-violet-500" },
+    86→];
+    87→
+    88→const EXPIRY_OPTIONS: { label: string; value: number }[] = [
+    89→  { label: "7 days", value: 7 },
+    90→  { label: "30 days", value: 30 },
+    91→  { label: "90 days", value: 90 },
+    92→  { label: "Never", value: 0 },
+    93→];
+    94→
+    95→// ---------- Helpers ----------
+    96→function scoreColor(v: number): string {
+    97→  return v >= 80 ? "#10b981" : v >= 60 ? "#f59e0b" : v >= 40 ? "#f97316" : "#ef4444";
+    98→}
+    99→
+   100→function truncateUrl(u: string, n = 28): string {
+   101→  const stripped = u.replace(/^https?:\/\//, "");
+   102→  if (stripped.length <= n) return stripped;
+   103→  return stripped.slice(0, n - 1) + "…";
+   104→}
+   105→
+   106→function relTime(iso: string | null): string {
+   107→  if (!iso) return "Never";
+   108→  const t = new Date(iso).getTime();
+   109→  if (Number.isNaN(t)) return "Never";
+   110→  const diff = Date.now() - t;
+   111→  const fmt = (abs: number, suffix: string) => {
+   112→    if (abs < 60_000) return `<1m${suffix}`;
+   113→    const mins = Math.floor(abs / 60_000);
+   114→    if (mins < 60) return `${mins}m${suffix}`;
+   115→    const hours = Math.floor(mins / 60);
+   116→    if (hours < 24) return `${hours}h${suffix}`;
+   117→    const days = Math.floor(hours / 24);
+   118→    if (days < 30) return `${days}d${suffix}`;
+   119→    const months = Math.floor(days / 30);
+   120→    return `${months}mo${suffix}`;
+   121→  };
+   122→  if (diff < 0) return fmt(-diff, "");
+   123→  return fmt(diff, " ago");
+   124→}
+   125→
+   126→function isExpired(link: PortalLink): boolean {
+   127→  if (!link.expiresAt) return false;
+   128→  return new Date(link.expiresAt).getTime() < Date.now();
+   129→}
+   130→
+   131→function portalPath(token: string): string {
+   132→  return `/portal/${token}`;
+   133→}
+   134→
+   135→function buildFullUrl(token: string): string {
+   136→  if (typeof window === "undefined") return portalPath(token);
+   137→  return `${window.location.origin}${portalPath(token)}`;
+   138→}
+   139→
+   140→// =================== Component ===================
+   141→export function ClientPortalView() {
+   142→  const currentAudit = useAppStore((s) => s.currentAudit);
+   143→
+   144→  const [links, setLinks] = React.useState<PortalLink[]>([]);
+   145→  const [loading, setLoading] = React.useState(true);
+   146→  const [error, setError] = React.useState<string | null>(null);
+   147→
+   148→  // Dialog state
+   149→  const [dialogOpen, setDialogOpen] = React.useState(false);
+   150→  const [adding, setAdding] = React.useState(false);
+   151→  const [form, setForm] = React.useState<PortalCreateBody>({
+   152→    clientName: "",
+   153→    clientEmail: "",
+   154→    auditUrl: "",
+   155→    overallScore: 0,
+   156→    expiresInDays: 30,
+   157→    agencyName: "UfuqAudit",
+   158→    primaryColor: "#10b981",
+   159→  });
+   160→
+   161→  // Revoke target
+   162→  const [revokeTarget, setRevokeTarget] = React.useState<PortalLink | null>(null);
+   163→  const [revoking, setRevoking] = React.useState(false);
+   164→
+   165→  const fetchData = React.useCallback(async () => {
+   166→    setLoading(true);
+   167→    setError(null);
+   168→    try {
+   169→      const r = await fetch("/api/portal", { cache: "no-store" });
+   170→      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+   171→      const j = (await r.json()) as { links: PortalLink[] };
+   172→      setLinks(Array.isArray(j.links) ? j.links : []);
+   173→    } catch (e: unknown) {
+   174→      const msg = e instanceof Error ? e.message : "Failed to load portal links";
+   175→      setError(msg);
+   176→      setLinks([]);
+   177→    } finally {
+   178→      setLoading(false);
+   179→    }
+   180→  }, []);
+   181→
+   182→  React.useEffect(() => {
+   183→    fetchData();
+   184→  }, [fetchData]);
+   185→
+   186→  const openCreateDialog = React.useCallback(() => {
+   187→    setForm({
+   188→      clientName: "",
+   189→      clientEmail: "",
+   190→      auditUrl: currentAudit?.url ?? "",
+   191→      overallScore: currentAudit?.overallScore ?? 0,
+   192→      expiresInDays: 30,
+   193→      agencyName: "UfuqAudit",
+   194→      primaryColor: "#10b981",
+   195→    });
+   196→    setDialogOpen(true);
+   197→  }, [currentAudit]);
+   198→
+   199→  const onCreate = async () => {
+   200→    const clientName = form.clientName.trim();
+   201→    const auditUrl = form.auditUrl.trim();
+   202→    if (!clientName) {
+   203→      toast.error("Enter a client name");
+   204→      return;
+   205→    }
+   206→    if (!auditUrl) {
+   207→      toast.error("Enter an audit URL to share");
+   208→      return;
+   209→    }
+   210→    setAdding(true);
+   211→    try {
+   212→      const r = await fetch("/api/portal", {
+   213→        method: "POST",
+   214→        headers: { "Content-Type": "application/json" },
+   215→        body: JSON.stringify({
+   216→          clientName,
+   217→          clientEmail: form.clientEmail.trim(),
+   218→          auditUrl,
+   219→          overallScore: form.overallScore,
+   220→          expiresInDays: form.expiresInDays,
+   221→          agencyName: form.agencyName.trim() || "UfuqAudit",
+   222→          primaryColor: form.primaryColor,
+   223→        }),
+   224→      });
+   225→      if (!r.ok) {
+   226→        const j = await r.json().catch(() => ({}));
+   227→        throw new Error(j?.error || `HTTP ${r.status}`);
+   228→      }
+   229→      const j = (await r.json()) as { link: PortalLink };
+   230→      setLinks((prev) => [j.link, ...prev]);
+   231→      const full = buildFullUrl(j.link.token);
+   232→      toast.success("Portal link created", {
+   233→        description: full,
+   234→      });
+   235→      setDialogOpen(false);
+   236→    } catch (e: unknown) {
+   237→      const msg = e instanceof Error ? e.message : "Failed to create link";
+   238→      toast.error(msg);
+   239→    } finally {
+   240→      setAdding(false);
+   241→    }
+   242→  };
+   243→
+   244→  const onCopyLink = async (link: PortalLink) => {
+   245→    const full = buildFullUrl(link.token);
+   246→    try {
+   247→      await navigator.clipboard.writeText(full);
+   248→      toast.success("Link copied to clipboard", { description: full });
+   249→    } catch {
+   250→      toast.error("Couldn't copy — clipboard unavailable");
+   251→    }
+   252→  };
+   253→
+   254→  const onView = (link: PortalLink) => {
+   255→    const full = buildFullUrl(link.token);
+   256→    window.open(full, "_blank", "noopener,noreferrer");
+   257→    toast.success("Opening client portal in new tab", {
+   258→      description: `${link.clientName} · ${truncateUrl(link.auditUrl, 32)}`,
+   259→    });
+   260→  };
+   261→
+   262→  const onConfirmRevoke = async () => {
+   263→    if (!revokeTarget) return;
+   264→    setRevoking(true);
+   265→    try {
+   266→      const r = await fetch(`/api/portal?id=${encodeURIComponent(revokeTarget.id)}`, {
+   267→        method: "DELETE",
+   268→      });
+   269→      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+   270→      setLinks((prev) => prev.filter((l) => l.id !== revokeTarget.id));
+   271→      toast.success("Link revoked");
+   272→      setRevokeTarget(null);
+   273→    } catch (e: unknown) {
+   274→      const msg = e instanceof Error ? e.message : "Failed to revoke link";
+   275→      toast.error(msg);
+   276→    } finally {
+   277→      setRevoking(false);
+   278→    }
+   279→  };
+   280→
+   281→  // ---------- Derived stats ----------
+   282→  const totalLinks = links.length;
+   283→  const totalViews = links.reduce((sum, l) => sum + (l.views ?? 0), 0);
+   284→  const activeLinks = links.filter((l) => !isExpired(l)).length;
+   285→  const avgScore =
+   286→    totalLinks > 0
+   287→      ? Math.round(links.reduce((sum, l) => sum + (l.overallScore ?? 0), 0) / totalLinks)
+   288→      : 0;
+   289→
+   290→  // ---------- Loading ----------
+   291→  if (loading) {
+   292→    return (
+   293→      <div className="space-y-6">
+   294→        <ViewHeader
+   295→          title="Client Portal"
+   296→          subtitle="Share branded audit reports with clients"
+   297→          icon={Share2}
+   298→          actions={
+   299→            <Button size="sm" className={EMERALD_BTN} disabled>
+   300→              <Plus className="w-3.5 h-3.5 mr-1" /> Create link
+   301→            </Button>
+   302→          }
+   303→        />
+   304→        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+   305→          {[0, 1, 2, 3].map((i) => (
+   306→            <Skeleton key={i} className="h-24 rounded-xl" />
+   307→          ))}
+   308→        </div>
+   309→        <Skeleton className="h-[400px] rounded-xl" />
+   310→      </div>
+   311→    );
+   312→  }
+   313→
+   314→  // ---------- Empty ----------
+   315→  if (links.length === 0) {
+   316→    return (
+   317→      <div className="space-y-6">
+   318→        <ViewHeader
+   319→          title="Client Portal"
+   320→          subtitle="Share branded audit reports with clients"
+   321→          icon={Share2}
+   322→          actions={
+   323→            <Button size="sm" className={EMERALD_BTN} onClick={openCreateDialog}>
+   324→              <Plus className="w-3.5 h-3.5 mr-1" /> Create link
+   325→            </Button>
+   326→          }
+   327→        />
+   328→        <Card className="p-10 text-center border-dashed">
+   329→          <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center mb-3">
+   330→            <Share2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+   331→          </div>
+   332→          <h3 className="font-semibold text-lg">No client links yet</h3>
+   333→          <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+   334→            {error
+   335→              ? `We couldn't load your portal links (${error}). Try again in a moment.`
+   336→              : "Create your first shareable audit link — clients get a branded, white-label report with your agency name and colors."}
+   337→          </p>
+   338→          <Button className={cn(EMERALD_BTN, "mt-5")} onClick={openCreateDialog}>
+   339→            <Plus className="w-4 h-4 mr-1" /> Create link
+   340→          </Button>
+   341→        </Card>
+   342→        <CreateLinkDialog
+   343→          open={dialogOpen}
+   344→          onOpenChange={setDialogOpen}
+   345→          form={form}
+   346→          setForm={setForm}
+   347→          onCreate={onCreate}
+   348→          adding={adding}
+   349→        />
+   350→      </div>
+   351→    );
+   352→  }
+   353→
+   354→  // ---------- Main render ----------
+   355→  return (
+   356→    <div className="space-y-6">
+   357→      <ViewHeader
+   358→        title="Client Portal"
+   359→        subtitle="Share branded audit reports with clients"
+   360→        icon={Share2}
+   361→        actions={
+   362→          <Button size="sm" className={EMERALD_BTN} onClick={openCreateDialog}>
+   363→            <Plus className="w-3.5 h-3.5 mr-1" /> Create link
+   364→          </Button>
+   365→        }
+   366→      />
+   367→
+   368→      {/* Stats row */}
+   369→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+   370→        <StatCard
+   371→          label="Total Links"
+   372→          value={totalLinks}
+   373→          hint={activeLinks === totalLinks ? "All active" : `${activeLinks} active`}
+   374→          color={EMERALD}
+   375→          icon={LinkIcon}
+   376→        />
+   377→        <StatCard
+   378→          label="Total Views"
+   379→          value={totalViews}
+   380→          hint="Across all links"
+   381→          color={TEAL_DARK}
+   382→          icon={Eye}
+   383→        />
+   384→        <StatCard
+   385→          label="Active Links"
+   386→          value={activeLinks}
+   387→          hint={`${totalLinks - activeLinks} expired`}
+   388→          color={activeLinks === 0 ? "#ef4444" : EMERALD}
+   389→          icon={Users}
+   390→        />
+   391→        <StatCard
+   392→          label="Avg Score"
+   393→          value={avgScore}
+   394→          hint="Across shared audits"
+   395→          color={scoreColor(avgScore)}
+   396→          icon={Gauge}
+   397→        />
+   398→      </div>
+   399→
+   400→      {/* Links table */}
+   401→      <Card className="p-5">
+   402→        <div className="flex items-center justify-between mb-4">
+   403→          <div>
+   404→            <h3 className="font-semibold">Portal Links</h3>
+   405→            <p className="text-xs text-muted-foreground mt-0.5">
+   406→              {totalLinks} {totalLinks === 1 ? "link" : "links"} · {activeLinks} active · {totalViews} total views
+   407→            </p>
+   408→          </div>
+   409→        </div>
+   410→
+   411→        <div className={SCROLLBAR_CLS}>
+   412→          <Table>
+   413→            <TableHeader className="sticky top-0 bg-card z-10">
+   414→              <TableRow>
+   415→                <TableHead className="min-w-[180px]">Client</TableHead>
+   416→                <TableHead className="min-w-[180px]">Audit URL</TableHead>
+   417→                <TableHead className="w-[80px] text-center">Score</TableHead>
+   418→                <TableHead className="min-w-[220px]">Share Link</TableHead>
+   419→                <TableHead className="w-[80px] text-center">Views</TableHead>
+   420→                <TableHead className="w-[110px]">Last Viewed</TableHead>
+   421→                <TableHead className="w-[110px]">Expires</TableHead>
+   422→                <TableHead className="w-[50px] text-right">Actions</TableHead>
+   423→              </TableRow>
+   424→            </TableHeader>
+   425→            <TableBody className="zebra">
+   426→              {links.map((link) => {
+   427→                const expired = isExpired(link);
+   428→                return (
+   429→                  <TableRow key={link.id} className="hover:bg-muted/40">
+   430→                    {/* Client */}
+   431→                    <TableCell>
+   432→                      <div className="flex flex-col">
+   433→                        <span className="text-sm font-medium leading-tight">
+   434→                          {link.clientName}
+   435→                        </span>
+   436→                        {link.clientEmail && (
+   437→                          <span className="text-[11px] text-muted-foreground truncate max-w-[200px]">
+   438→                            {link.clientEmail}
+   439→                          </span>
+   440→                        )}
+   441→                      </div>
+   442→                    </TableCell>
+   443→
+   444→                    {/* Audit URL */}
+   445→                    <TableCell className="max-w-[240px]">
+   446→                      <div className="flex items-center gap-1.5 min-w-0">
+   447→                        <LinkIcon className="w-3 h-3 text-muted-foreground shrink-0" />
+   448→                        <Tooltip>
+   449→                          <TooltipTrigger asChild>
+   450→                            <span className="text-xs text-muted-foreground truncate cursor-help">
+   451→                              {truncateUrl(link.auditUrl)}
+   452→                            </span>
+   453→                          </TooltipTrigger>
+   454→                          <TooltipContent side="top" className="max-w-[400px] break-all">
+   455→                            {link.auditUrl}
+   456→                          </TooltipContent>
+   457→                        </Tooltip>
+   458→                      </div>
+   459→                    </TableCell>
+   460→
+   461→                    {/* Score */}
+   462→                    <TableCell className="text-center">
+   463→                      <span
+   464→                        className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold tabular-nums min-w-[34px]"
+   465→                        style={{
+   466→                          backgroundColor: `${scoreColor(link.overallScore)}1a`,
+   467→                          color: scoreColor(link.overallScore),
+   468→                        }}
+   469→                      >
+   470→                        {link.overallScore}
+   471→                      </span>
+   472→                    </TableCell>
+   473→
+   474→                    {/* Share Link (copyable input + copy button) */}
+   475→                    <TableCell>
+   476→                      <div className="flex items-center gap-1.5 min-w-0">
+   477→                        <Input
+   478→                          readOnly
+   479→                          value={portalPath(link.token)}
+   480→                          className="h-7 text-[11px] font-mono truncate bg-muted/40"
+   481→                          aria-label={`Share path for ${link.clientName}`}
+   482→                        />
+   483→                        <Button
+   484→                          variant="outline"
+   485→                          size="sm"
+   486→                          className="h-7 w-7 p-0 shrink-0"
+   487→                          onClick={() => onCopyLink(link)}
+   488→                          aria-label="Copy link"
+   489→                        >
+   490→                          <Copy className="w-3.5 h-3.5" />
+   491→                        </Button>
+   492→                      </div>
+   493→                    </TableCell>
+   494→
+   495→                    {/* Views */}
+   496→                    <TableCell className="text-center">
+   497→                      <Badge
+   498→                        variant="outline"
+   499→                        className={cn(
+   500→                          "tabular-nums",
+   501→                          link.views === 0
+   502→                            ? "bg-muted/40 text-muted-foreground"
+   503→                            : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900",
+   504→                        )}
+   505→                      >
+   506→                        {link.views}
+   507→                      </Badge>
+   508→                    </TableCell>
+   509→
+   510→                    {/* Last Viewed */}
+   511→                    <TableCell className="text-xs text-muted-foreground">
+   512→                      {relTime(link.lastViewedAt)}
+   513→                    </TableCell>
+   514→
+   515→                    {/* Expires */}
+   516→                    <TableCell>
+   517→                      {expired ? (
+   518→                        <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400">
+   519→                          <Ban className="w-3 h-3" /> Expired
+   520→                        </span>
+   521→                      ) : link.expiresAt ? (
+   522→                        <span className="text-xs text-muted-foreground">
+   523→                          {relTime(link.expiresAt)}
+   524→                        </span>
+   525→                      ) : (
+   526→                        <span className="text-xs text-muted-foreground">Never</span>
+   527→                      )}
+   528→                    </TableCell>
+   529→
+   530→                    {/* Actions */}
+   531→                    <TableCell className="text-right">
+   532→                      <DropdownMenu>
+   533→                        <DropdownMenuTrigger asChild>
+   534→                          <Button
+   535→                            variant="ghost"
+   536→                            size="sm"
+   537→                            className="h-7 w-7 p-0"
+   538→                            aria-label="Link actions"
+   539→                          >
+   540→                            <MoreHorizontal className="w-4 h-4" />
+   541→                          </Button>
+   542→                        </DropdownMenuTrigger>
+   543→                        <DropdownMenuContent align="end" className="w-[160px]">
+   544→                          <DropdownMenuItem onClick={() => onCopyLink(link)}>
+   545→                            <Copy className="w-3.5 h-3.5" /> Copy link
+   546→                          </DropdownMenuItem>
+   547→                          <DropdownMenuItem onClick={() => onView(link)}>
+   548→                            <ExternalLink className="w-3.5 h-3.5" /> View
+   549→                          </DropdownMenuItem>
+   550→                          <DropdownMenuSeparator />
+   551→                          <DropdownMenuItem
+   552→                            variant="destructive"
+   553→                            onClick={() => setRevokeTarget(link)}
+   554→                          >
+   555→                            <Ban className="w-3.5 h-3.5" /> Revoke
+   556→                          </DropdownMenuItem>
+   557→                        </DropdownMenuContent>
+   558→                      </DropdownMenu>
+   559→                    </TableCell>
+   560→                  </TableRow>
+   561→                );
+   562→              })}
+   563→            </TableBody>
+   564→          </Table>
+   565→        </div>
+   566→      </Card>
+   567→
+   568→      <CreateLinkDialog
+   569→        open={dialogOpen}
+   570→        onOpenChange={setDialogOpen}
+   571→        form={form}
+   572→        setForm={setForm}
+   573→        onCreate={onCreate}
+   574→        adding={adding}
+   575→      />
+   576→
+   577→      {/* Revoke confirmation */}
+   578→      <AlertDialog
+   579→        open={revokeTarget !== null}
+   580→        onOpenChange={(o) => !o && !revoking && setRevokeTarget(null)}
+   581→      >
+   582→        <AlertDialogContent>
+   583→          <AlertDialogHeader>
+   584→            <AlertDialogTitle>Revoke portal link?</AlertDialogTitle>
+   585→            <AlertDialogDescription>
+   586→              The link shared with{" "}
+   587→              <span className="font-medium text-foreground">{revokeTarget?.clientName}</span>{" "}
+   588→              will stop working immediately. The client will no longer be able to access the audit report.
+   589→            </AlertDialogDescription>
+   590→          </AlertDialogHeader>
+   591→          <AlertDialogFooter>
+   592→            <AlertDialogCancel disabled={revoking}>Keep link</AlertDialogCancel>
+   593→            <AlertDialogAction
+   594→              onClick={(e) => {
+   595→                e.preventDefault();
+   596→                onConfirmRevoke();
+   597→              }}
+   598→              disabled={revoking}
+   599→              className="bg-red-600 hover:bg-red-700 text-white"
+   600→            >
+   601→              {revoking ? (
+   602→                <>
+   603→                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Revoking…
+   604→                </>
+   605→              ) : (
+   606→                <>
+   607→                  <Ban className="w-3.5 h-3.5 mr-1" /> Revoke link
+   608→                </>
+   609→              )}
+   610→            </AlertDialogAction>
+   611→          </AlertDialogFooter>
+   612→        </AlertDialogContent>
+   613→      </AlertDialog>
+   614→    </div>
+   615→  );
+   616→}
+   617→
+   618→// ---------- Create link dialog ----------
+   619→interface CreateLinkDialogProps {
+   620→  open: boolean;
+   621→  onOpenChange: (o: boolean) => void;
+   622→  form: PortalCreateBody;
+   623→  setForm: React.Dispatch<React.SetStateAction<PortalCreateBody>>;
+   624→  onCreate: () => void;
+   625→  adding: boolean;
+   626→}
+   627→
+   628→function CreateLinkDialog({
+   629→  open, onOpenChange, form, setForm, onCreate, adding,
+   630→}: CreateLinkDialogProps) {
+   631→  const update = <K extends keyof PortalCreateBody>(k: K, v: PortalCreateBody[K]) =>
+   632→    setForm((p) => ({ ...p, [k]: v }));
+   633→
+   634→  const scoreClr = scoreColor(form.overallScore || 0);
+   635→
+   636→  return (
+   637→    <Dialog open={open} onOpenChange={onOpenChange}>
+   638→      <DialogContent className="sm:max-w-lg">
+   639→        <DialogHeader>
+   640→          <DialogTitle>Create portal link</DialogTitle>
+   641→        </DialogHeader>
+   642→        <div className="space-y-4">
+   643→          {/* Client row */}
+   644→          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   645→            <div className="space-y-1.5">
+   646→              <Label htmlFor="pl-name" className="text-xs">Client name</Label>
+   647→              <Input
+   648→                id="pl-name"
+   649→                placeholder="Acme Corp"
+   650→                value={form.clientName}
+   651→                onChange={(e) => update("clientName", e.target.value)}
+   652→                autoFocus
+   653→              />
+   654→            </div>
+   655→            <div className="space-y-1.5">
+   656→              <Label htmlFor="pl-email" className="text-xs">Client email (optional)</Label>
+   657→              <Input
+   658→                id="pl-email"
+   659→                type="email"
+   660→                placeholder="john@acme.com"
+   661→                value={form.clientEmail}
+   662→                onChange={(e) => update("clientEmail", e.target.value)}
+   663→              />
+   664→            </div>
+   665→          </div>
+   666→
+   667→          {/* URL + score row */}
+   668→          <div className="grid grid-cols-1 sm:grid-cols-[1fr_110px] gap-3">
+   669→            <div className="space-y-1.5">
+   670→              <Label htmlFor="pl-url" className="text-xs">Audit URL</Label>
+   671→              <Input
+   672→                id="pl-url"
+   673→                placeholder="https://example.com"
+   674→                value={form.auditUrl}
+   675→                onChange={(e) => update("auditUrl", e.target.value)}
+   676→              />
+   677→            </div>
+   678→            <div className="space-y-1.5">
+   679→              <Label htmlFor="pl-score" className="text-xs">Score</Label>
+   680→              <Input
+   681→                id="pl-score"
+   682→                type="number"
+   683→                min={0}
+   684→                max={100}
+   685→                value={form.overallScore}
+   686→                onChange={(e) => update("overallScore", Number(e.target.value))}
+   687→              />
+   688→            </div>
+   689→          </div>
+   690→
+   691→          {/* Expiry + Agency row */}
+   692→          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   693→            <div className="space-y-1.5">
+   694→              <Label className="text-xs">Expires in</Label>
+   695→              <Select
+   696→                value={String(form.expiresInDays)}
+   697→                onValueChange={(v) => update("expiresInDays", Number(v))}
+   698→              >
+   699→                <SelectTrigger className="w-full">
+   700→                  <SelectValue />
+   701→                </SelectTrigger>
+   702→                <SelectContent>
+   703→                  {EXPIRY_OPTIONS.map((o) => (
+   704→                    <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>
+   705→                  ))}
+   706→                </SelectContent>
+   707→              </Select>
+   708→            </div>
+   709→            <div className="space-y-1.5">
+   710→              <Label htmlFor="pl-agency" className="text-xs">Agency name</Label>
+   711→              <Input
+   712→                id="pl-agency"
+   713→                placeholder="UfuqAudit"
+   714→                value={form.agencyName}
+   715→                onChange={(e) => update("agencyName", e.target.value)}
+   716→              />
+   717→            </div>
+   718→          </div>
+   719→
+   720→          {/* Brand color swatches */}
+   721→          <div className="space-y-1.5">
+   722→            <Label className="text-xs">Brand color</Label>
+   723→            <div className="flex items-center gap-2 flex-wrap">
+   724→              {BRAND_SWATCHES.map((sw) => {
+   725→                const selected = form.primaryColor === sw.value;
+   726→                return (
+   727→                  <button
+   728→                    key={sw.value}
+   729→                    type="button"
+   730→                    onClick={() => update("primaryColor", sw.value)}
+   731→                    aria-label={sw.name}
+   732→                    aria-pressed={selected}
+   733→                    className={cn(
+   734→                      "w-7 h-7 rounded-full border-2 transition-all flex items-center justify-center",
+   735→                      selected
+   736→                        ? cn("ring-2 ring-offset-2 ring-offset-background", sw.ring)
+   737→                        : "border-transparent hover:scale-110",
+   738→                    )}
+   739→                    style={{ backgroundColor: sw.value }}
+   740→                  >
+   741→                    {selected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+   742→                  </button>
+   743→                );
+   744→              })}
+   745→            </div>
+   746→          </div>
+   747→
+   748→          <Separator />
+   749→
+   750→          {/* Branding preview */}
+   751→          <div className="space-y-2">
+   752→            <Label className="text-xs flex items-center gap-1.5">
+   753→              <Eye className="w-3.5 h-3.5" /> Client preview
+   754→            </Label>
+   755→            <BrandingPreview
+   756→              agencyName={form.agencyName.trim() || "UfuqAudit"}
+   757→              brandColor={form.primaryColor}
+   758→              score={form.overallScore || 0}
+   759→              clientName={form.clientName.trim() || "Your client"}
+   760→              auditUrl={form.auditUrl}
+   761→            />
+   762→          </div>
+   763→
+   764→          <p className="text-[11px] text-muted-foreground">
+   765→            Clients see a clean, white-labeled report — your branding, no UfuqAudit references in the report view.
+   766→          </p>
+   767→        </div>
+   768→        <DialogFooter>
+   769→          <DialogClose asChild>
+   770→            <Button variant="outline" size="sm" disabled={adding}>Cancel</Button>
+   771→          </DialogClose>
+   772→          <Button size="sm" className={EMERALD_BTN} onClick={onCreate} disabled={adding}>
+   773→            {adding ? (
+   774→              <>
+   775→                <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Creating…
+   776→              </>
+   777→            ) : (
+   778→              <>
+   779→                <Plus className="w-3.5 h-3.5 mr-1" /> Create link
+   780→              </>
+   781→            )}
+   782→          </Button>
+   783→        </DialogFooter>
+   784→      </DialogContent>
+   785→    </Dialog>
+   786→  );
+   787→}
+   788→
+   789→// ---------- Branding preview card (mini mockup) ----------
+   790→function BrandingPreview({
+   791→  agencyName, brandColor, score, clientName, auditUrl,
+   792→}: {
+   793→  agencyName: string;
+   794→  brandColor: string;
+   795→  score: number;
+   796→  clientName: string;
+   797→  auditUrl: string;
+   798→}) {
+   799→  return (
+   800→    <div
+   801→      className="rounded-lg border overflow-hidden"
+   802→      style={{ borderColor: `${brandColor}33` }}
+   803→    >
+   804→      {/* Header strip — brand color */}
+   805→      <div
+   806→        className="px-3 py-2.5 flex items-center justify-between"
+   807→        style={{ backgroundColor: brandColor }}
+   808→      >
+   809→        <div className="flex items-center gap-2 min-w-0">
+   810→          <div
+   811→            className="w-6 h-6 rounded-md bg-white/25 flex items-center justify-center shrink-0"
+   812→            aria-hidden
+   813→          >
+   814→            <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+   815→          </div>
+   816→          <span className="text-xs font-bold text-white truncate">{agencyName}</span>
+   817→        </div>
+   818→        <span className="text-[10px] text-white/80 shrink-0 hidden sm:inline">Audit Report</span>
+   819→      </div>
+   820→
+   821→      {/* Body */}
+   822→      <div className="px-3 py-3 bg-card">
+   823→        <div className="flex items-center justify-between gap-3">
+   824→          <div className="min-w-0">
+   825→            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Prepared for</p>
+   826→            <p className="text-sm font-semibold truncate">{clientName}</p>
+   827→            <p className="text-[11px] text-muted-foreground truncate">
+   828→              {auditUrl ? truncateUrl(auditUrl, 36) : "—"}
+   829→            </p>
+   830→          </div>
+   831→          <div className="text-right shrink-0">
+   832→            <div
+   833→              className="text-2xl font-bold tabular-nums leading-none"
+   834→              style={{ color: brandColor }}
+   835→            >
+   836→              {score}
+   837→            </div>
+   838→            <div className="text-[10px] text-muted-foreground mt-0.5">Ufuq Score</div>
+   839→          </div>
+   840→        </div>
+   841→
+   842→        {/* Mock score bars */}
+   843→        <div className="mt-3 grid grid-cols-3 gap-2">
+   844→          {[
+   845→            { label: "SEO", v: Math.min(100, score + 2) },
+   846→            { label: "Perf", v: Math.max(40, score - 8) },
+   847→            { label: "AEO", v: Math.max(40, score - 4) },
+   848→          ].map((b) => (
+   849→            <div key={b.label} className="space-y-1">
+   850→              <div className="flex items-center justify-between">
+   851→                <span className="text-[10px] text-muted-foreground">{b.label}</span>
+   852→                <span className="text-[10px] font-medium tabular-nums">{b.v}</span>
+   853→              </div>
+   854→              <div className="h-1 rounded-full bg-muted overflow-hidden">
+   855→                <div
+   856→                  className="h-full rounded-full"
+   857→                  style={{ width: `${b.v}%`, backgroundColor: brandColor }}
+   858→                />
+   859→              </div>
+   860→            </div>
+   861→          ))}
+   862→        </div>
+   863→      </div>
+   864→    </div>
+   865→  );
+   866→}
+   867→
+   868→

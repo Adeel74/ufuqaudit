@@ -27,6 +27,8 @@ export type ViewKey =
   | "link-graph"
   | "scheduled"
   | "portal"
+  | "search-console"
+  | "email"
   | "reports"
   | "admin"
   | "settings"
@@ -89,7 +91,9 @@ export const ADMIN_VIEWS: { key: ViewKey; label: string; icon: string }[] = [
   { key: "content", label: "Content", icon: "PenLine" },
   { key: "link-graph", label: "Link Graph", icon: "Network" },
   { key: "scheduled", label: "Scheduled", icon: "CalendarClock" },
+  { key: "search-console", label: "Search Console", icon: "BarChart3" },
   { key: "portal", label: "Client Portal", icon: "Share2" },
+  { key: "email", label: "Email Reports", icon: "Mail" },
   { key: "reports", label: "Reports", icon: "FileBarChart" },
   { key: "integrations", label: "Integrations", icon: "Plug" },
   { key: "billing", label: "Billing", icon: "CreditCard" },

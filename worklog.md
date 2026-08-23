@@ -745,3 +745,94 @@ Next-phase opportunities:
 - Real backlink API integration (Ahrefs/Moz/Semrush)
 - WordPress/Shopify CMS plugins
 - On-page SEO editor
+
+---
+Task ID: 15
+Agent: frontend-styling-expert (search-console + email-reports)
+Task: Build Search Console integration + Email Reports views
+
+Work Log:
+- Read worklog.md, shared.tsx (ViewHeader/StatCard/EmptyAudit), store.ts (ViewKey includes search-console + email already wired in page.tsx), keywords-view.tsx + backlinks-view.tsx + client-portal-view.tsx for chart/table/sortable header/swatch patterns, scheduled-view.tsx for Switch usage, settings-view.tsx for Tabs usage, AuditResult type, /api/search-console/route.ts and /api/email/send/route.ts for response shapes.
+- Created `/home/z/my-project/src/components/dashboard/search-console-view.tsx` exporting `SearchConsoleView`:
+  - Fetches `GET /api/search-console` on mount with loading skeletons + retry-on-error empty state.
+  - Header (BarChart3 icon) + "Connect GSC" emerald button → sonner toast "OAuth flow coming soon" (Pro feature mock).
+  - 4 StatCards: Total Clicks (fmtCompact e.g. 12.3K), Total Impressions, Avg CTR (colored by 3/1 thresholds), Avg Position (posColor green→red).
+  - 30-day performance AreaChart (height 200, emerald gradient fill `gsc-clicks-grad`, daily X-axis with interval=4, YAxis compact formatter).
+  - Filter bar: search input (queries only) + date range Select (7/30/90 — UI only, no re-fetch).
+  - Tabs (Queries | Pages | Countries | Devices):
+    * Queries: zebra-striped TableBody with sticky header; columns Query, Clicks, Impr., CTR (color: green ≥3%, amber ≥1%, red <1%), Position badge (posBadgeCls), Trend (Sparkline 80×30 mini AreaChart, colored by position). Generic SortableHead<K> over query/clicks/impressions/position. max-h-[50vh] overflow-y-auto + custom scrollbar classes.
+    * Pages: zebra table — URL (truncateUrl 36 chars + Tooltip on hover showing full URL), Clicks, Impr., CTR, Position badge. Sortable.
+    * Countries: horizontal Recharts BarChart (layout="vertical", emerald bars, maxBarSize 28, radius 4) + small zebra table (Country, Code badge, Clicks, Impr.).
+    * Devices: Recharts PieChart donut (innerRadius 60 / outerRadius 92, Mobile=emerald / Desktop=teal / Tablet=amber) + 3-card legend (icon, %, clicks) + a sibling card with progress-bar breakdown by device.
+- Created `/home/z/my-project/src/components/dashboard/email-reports-view.tsx` exporting `EmailReportsView`:
+  - 2-col responsive grid (composer lg:col-span-3 sticky + history lg:col-span-2).
+  - Composer: To (email, required, AtSign icon), Cc (optional, comma-separated validated), Subject (prefilled `Website Audit Report — {host}`, with live 0/60 char counter that turns amber past 60), Message Textarea prefilled via buildMessage() using currentAudit.url host + currentAudit.overallScore + user.name. Two Switch rows: "Include PDF report" (default on, shows "A branded PDF will be generated and attached" note) + "Include AI action plan" (default on). 5 brand color swatches (Emerald/Teal/Amber/Rose/Violet) with CheckCircle2 selected state (mirrors client-portal-view). Emerald full-width Send button → POST /api/email/send with Loader2 spinner; on success sonner toast `Email sent to {to}` (with "PDF report attached" desc if includeReport), prepends entry to history, resets form; on error toast.error. Re-prefills subject/message via useEffect when currentAudit changes.
+  - Sent history: pre-seeded with 5 mock entries (timestamps 2h → 14d ago) + any new sends prepended; each card shows recipient (AtSign), subject (truncate), relTime timestamp + PDF/AI plan badges + emerald Sent badge + "View" ghost button (toast.info preview). max-h-[60vh] overflow-y-auto with custom scrollbar.
+  - Tips card: 3 best-practice tips (subject <60 chars, personalize greeting, clear CTA) in 3-col responsive grid with numbered emerald circles + amber Lightbulb icon + footer "Read full guide" outline button.
+- Style rules respected: emerald/teal accents only (no indigo/blue primary), `p-4`/`p-5` cards, `gap-4`/`gap-6`, dark mode `dark:` prefixes on every hardcoded color, lucide-react icons, sonner toasts, "use client", strict TS (interfaces for QueryRow/PageRow/CountryRow/DeviceRow/GSCData/SentEmail/SendResponse/SendErrorBody, generic SortableHead<K extends string>, no `any`), loading + empty states everywhere, Recharts with proper margins/no rotated labels/10–11px font sizes, fmtCompact for K/M formatting.
+- Verification: `bun run lint` clean; `bunx tsc --noEmit` clean for both new files (only unrelated pre-existing errors in examples/ and skills/ dirs). Fixed one TS error: extended `DEVICE_ICON` value type to `React.ComponentType<{ className?: string; style?: React.CSSProperties }>` so the device-icon JSX can receive a `style` prop for color.
+
+Stage Summary:
+- Files created: `src/components/dashboard/search-console-view.tsx`, `src/components/dashboard/email-reports-view.tsx`.
+- Both already routed in `src/app/page.tsx` (case "search-console" → SearchConsoleView, case "email" → EmailReportsView) — no edits needed outside scope.
+- Conventions matched existing dashboard views (shared ViewHeader/StatCard, EMERALD_BTN constant, SCROLLBAR_CLS utility, zebra TableBody, SortableHead pattern from keywords-view, brand swatch pattern from client-portal-view).
+
+---
+Task ID: cron-review-7
+Agent: webDevReview cron (Z.ai Code)
+Task: QA pass + bug fixes + new features (Search Console, Email Reports, dark mode fix)
+
+Work Log:
+- Read worklog.md (7 prior rounds: MVP + cron-review-1 through cron-review-6)
+- Full QA pass with agent-browser: tested portal page with real audit data, dark mode across dashboard/issues/AEO/link-graph, VLM analysis
+- VLM findings (this round):
+  1. Dashboard Top Priorities: severity cards used light backgrounds (bg-red-50, bg-orange-50, etc.) in dark mode — inconsistent with the dark theme
+  2. Portal page with real data: renders correctly (9/10 polish)
+  3. Dark mode across all views: 9/10 polish, contrast excellent
+- Fixed: Dashboard Top Priorities severity cards now use `dark:` prefixed classes — `bg-red-50 dark:bg-red-950/30`, `text-red-600 dark:text-red-400`, etc. for all 4 severity levels. VLM confirmed: "dark-appropriate backgrounds that fit the dark mode theme."
+
+- New features (2 major):
+  1. Search Console integration (search-console-view.tsx + /api/search-console) — GSC-style data dashboard:
+     - 4 StatCards (Total Clicks, Total Impressions, Avg CTR, Avg Position) with formatted numbers (12.3K)
+     - 30-day performance AreaChart with emerald gradient fill
+     - 4 tabs: Queries (zebra table with sparklines + CTR color coding), Pages (zebra table), Countries (horizontal bar chart), Devices (donut chart with emerald/teal/amber slices)
+     - Filter bar: date range select + search input
+     - "Connect GSC" button (OAuth mock — Pro feature)
+     - API: 15 queries, 9 pages, 6 countries, 3 devices, 30-day trend — all deterministically seeded
+  2. Email Reports (email-reports-view.tsx + /api/email/send) — email composer + history:
+     - 2-column layout: composer (left, sticky) + sent history (right)
+     - Composer: To/Cc/Subject (prefilled from audit URL, 60-char counter), Message (prefilled template with audit score + user name), Include PDF + Include AI Action Plan switches, 5 brand color swatches
+     - Send button → POST /api/email/send (800ms simulated delay) → toast "Email sent", form reset, prepend to history
+     - Sent history: 5 mock entries + new sends, with recipient/subject/timestamp/status badge/View button
+     - Tips card: 3 email best-practice tips
+     - API: validates to+subject, returns messageId + timestamp
+
+- New API routes: /api/search-console (GET), /api/email/send (POST)
+- New sidebar entries: Search Console (BarChart3 icon), Email Reports (Mail icon) — both always-enabled
+- Store + page.tsx routing updated with search-console + email ViewKeys
+
+Stage Summary:
+- Files created:
+  - src/components/dashboard/search-console-view.tsx (SearchConsoleView)
+  - src/components/dashboard/email-reports-view.tsx (EmailReportsView)
+  - src/app/api/search-console/route.ts (GSC mock data: queries/pages/countries/devices/trend)
+  - src/app/api/email/send/route.ts (email send mock with 800ms delay)
+- Files modified:
+  - src/lib/store.ts (search-console + email ViewKeys + sidebar entries)
+  - src/app/page.tsx (new view routing)
+  - src/components/layout/sidebar.tsx (BarChart3 + Mail icons, always-enabled list)
+  - src/components/dashboard/dashboard-view.tsx (dark mode severity card classes)
+- Lint: PASS. tsc: 0 errors in src. No console errors.
+- Search Console: 4 StatCards + AreaChart + 4 tabs (Queries/Pages/Countries/Devices) all render with data. VLM 9/10 polish.
+- Email Reports: composer + history layout renders, email send works end-to-end (API returns ok+messageId, toast confirms). VLM 9/10 polish.
+- Dark mode: Top Priorities severity cards now use dark-appropriate backgrounds. VLM confirmed.
+- Portal page with real audit data: renders correctly (9/10).
+- Dev server running on :3000, dev.log clean.
+
+Next-phase opportunities:
+- Google Search Console OAuth integration (real data)
+- Backend cron job to execute enabled scheduled audits
+- API rate limiting + Stripe billing abstraction
+- Real backlink API integration (Ahrefs/Moz/Semrush)
+- WordPress/Shopify CMS plugins
+- On-page SEO editor
