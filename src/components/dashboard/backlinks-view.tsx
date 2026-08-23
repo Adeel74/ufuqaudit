@@ -532,7 +532,7 @@ export function BacklinksView() {
                 <TableHead className="w-[90px]">Status</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody className="zebra">
               {sorted.map((bl, i) => {
                 const typeMeta = TYPE_BADGE[bl.type] ?? TYPE_BADGE.nofollow;
                 const statusMeta = STATUS_BADGE[bl.status] ?? STATUS_BADGE.active;

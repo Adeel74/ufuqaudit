@@ -281,7 +281,7 @@ export function AuditHistoryView() {
         </div>
         <div style={{ height: 280 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={trendData} margin={{ top: 8, right: 16, left: -8, bottom: 0 }}>
+            <AreaChart data={trendData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="historyGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={EMERALD} stopOpacity={0.45} />
@@ -290,7 +290,7 @@ export function AuditHistoryView() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.4} vertical={false} />
               <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
-              <YAxis domain={[40, 100]} stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} width={32} />
+              <YAxis domain={[40, 100]} stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} width={36} tickFormatter={(v) => `${v}`} />
               <RTooltip
                 contentStyle={{
                   borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 12, padding: "8px 10px",
@@ -322,10 +322,10 @@ export function AuditHistoryView() {
         </div>
         <div style={{ height: 300 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={catTrendData} margin={{ top: 8, right: 16, left: -8, bottom: 0 }}>
+            <LineChart data={catTrendData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.4} vertical={false} />
               <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
-              <YAxis domain={[0, 100]} stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} width={32} />
+              <YAxis domain={[0, 100]} stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} width={36} tickFormatter={(v) => `${v}`} />
               <RTooltip
                 contentStyle={{
                   borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 12, padding: "8px 10px",

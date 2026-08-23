@@ -278,7 +278,7 @@ export function CompetitorsView() {
               Enter your site plus up to 3 competitor URLs, then run a comparison.
             </p>
           </div>
-          <Badge variant="outline" className="text-[11px]">4 sites max</Badge>
+          <Badge variant="outline" className="text-[11px]">1 site + 3 competitors</Badge>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

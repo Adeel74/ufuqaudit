@@ -543,3 +543,30 @@ Next-phase opportunities:
 - White-label client portal
 - On-page SEO editor (edit meta tags directly in the app)
 - Internal link graph visualization
+
+---
+Task ID: 13
+Agent: frontend-styling-expert (link-graph)
+Task: Build Internal Link Graph visualization view
+
+Work Log:
+- Read worklog.md, shared.tsx, types.ts, store.ts, pages-view.tsx, keywords-view.tsx, content-view.tsx for context (shared helpers, emerald/teal accent, p-4 cards, SCROLLBAR_CLS pattern, sonner toasts).
+- Confirmed `link-graph` route already wired in `src/app/page.tsx` (case → `<LinkGraphView />`) and sidebar entry exists.
+- Created `/home/z/my-project/src/components/dashboard/link-graph-view.tsx` exporting `LinkGraphView`.
+- Built custom SVG-based node graph (`GraphSvg` component) with deterministic layout seeded by FNV-1a hash of all page URLs + mulberry32 PRNG → same audit always renders the same node positions/edges.
+- Node placement: homepage (pages[0]) at center, other top-20 pages arranged on 3 concentric rings based on `internalLinks` ratio (>=55% inner, >=25% mid, else outer); orphans pushed further out +25px. Angular position = i * (2π/n) + seeded jitter.
+- Edges generated deterministically: home → next 3–5 non-orphan nodes; each non-orphan node → 1–3 random other nodes (orphans never receive incoming edges); deduped via Set.
+- Node visuals: radius proportional to links (9–26px), 4 radial gradients (home=teal, strong ring=deep emerald, normal=emerald, orphan=red), white stroke, hover enlarges +2.5px and brings to front.
+- Interactions: hover a node → highlights its edges (opacity 0.75) + dims others, in-SVG tooltip with URL/links/words/indexable/orphan status; click a node → sonner toast with page details.
+- 5 StatCards row: Total Pages, Internal Links (sum), Avg Links/Page, Orphan Pages (<2), Broken Links (sum).
+- Right sidebar: scrollable card (`max-h-[500px] overflow-y-auto` with scrollbar utility classes) listing pages sorted by `internalLinks` desc — rank, slug, badge, mini bar, word count, click→toast.
+- Bottom 3 insight cards: Strongest pages (top 3 with medal colors), Orphan/Weak pages (list + amber callout "Add internal links" suggestion), Link distribution (Recharts horizontal `BarChart` top 10, cells colored emerald/teal with red for orphans).
+- Header `Network` icon + subtitle, EmptyAudit fallback ("Run an audit to see your link graph"), and `<2 pages` friendly message via `Unlink` icon.
+- Fixed initial `react-hooks/rules-of-hooks` violation by moving all `useMemo`/`useCallback` calls BEFORE the early returns (computed against `pages` derived from `audit?.pages ?? []`).
+- Verified: `bun run lint` clean (0 errors); `bunx tsc --noEmit` shows zero errors for link-graph-view.tsx (remaining tsc errors are in unrelated examples/skills dirs).
+
+Stage Summary:
+- File created: `/home/z/my-project/src/components/dashboard/link-graph-view.tsx` (single export `LinkGraphView`).
+- Key decisions: custom SVG graph (NOT Recharts) because Recharts lacks network graph support; deterministic layout via seeded PRNG (mulberry32 + FNV-1a hash of URLs) for stable per-audit rendering; concentric ring layout with home at center and link-count-based depth; emerald/teal brand accent only, red reserved for orphan pages; in-SVG tooltips (no DOM portal needed) keep it responsive via viewBox + preserveAspectRatio.
+- All hooks called before early returns; `useMemo` for graph + sorted list, `useCallback` for toast announcer.
+- No files outside scope touched.

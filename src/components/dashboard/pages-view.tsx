@@ -196,7 +196,7 @@ export function PagesView() {
                 <TableHead>Schema</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody className="zebra">
               {sorted.length === 0 ? (
                 <TableRow>
                   <TableCell

@@ -585,7 +585,7 @@ export function KeywordsView() {
                 <TableHead className="w-[90px] text-right">Trend</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody className="zebra">
               {sorted.map((k) => {
                 const { text: deltaText, delta } = fmtDelta(k.position, k.prevPosition);
                 return (

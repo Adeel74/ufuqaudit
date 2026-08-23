@@ -8,6 +8,7 @@ import type { AuditResult } from "./types";
 export type ViewKey =
   | "landing"
   | "audit-progress"
+  | "onboarding"
   | "dashboard"
   | "issues"
   | "pages"
@@ -23,6 +24,7 @@ export type ViewKey =
   | "keywords"
   | "backlinks"
   | "content"
+  | "link-graph"
   | "reports"
   | "admin"
   | "settings"
@@ -83,6 +85,7 @@ export const ADMIN_VIEWS: { key: ViewKey; label: string; icon: string }[] = [
   { key: "keywords", label: "Keywords", icon: "Search" },
   { key: "backlinks", label: "Backlinks", icon: "Link2" },
   { key: "content", label: "Content", icon: "PenLine" },
+  { key: "link-graph", label: "Link Graph", icon: "Network" },
   { key: "reports", label: "Reports", icon: "FileBarChart" },
   { key: "integrations", label: "Integrations", icon: "Plug" },
   { key: "billing", label: "Billing", icon: "CreditCard" },

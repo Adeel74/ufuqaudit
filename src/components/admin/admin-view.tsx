@@ -133,11 +133,21 @@ function formatDate(iso: string): string {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "—";
   return d.toLocaleString(undefined, {
-    year: "numeric",
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+  });
+}
+
+function formatDateLong(iso: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   });
 }
 
@@ -272,7 +282,7 @@ export function AdminView() {
                     <TableHead>When</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody className="zebra">
                   {stats?.recentAudits.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
@@ -322,7 +332,7 @@ export function AdminView() {
                     <TableHead>Details</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody className="zebra">
                   {logs.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center text-muted-foreground py-6">
@@ -378,7 +388,7 @@ export function AdminView() {
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className="zebra">
                 {users.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
@@ -412,7 +422,7 @@ export function AdminView() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDate(u.createdAt)}
+                      {formatDateLong(u.createdAt)}
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>

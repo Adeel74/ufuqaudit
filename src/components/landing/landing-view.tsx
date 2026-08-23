@@ -11,11 +11,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ScoreRing } from "@/components/dashboard/score-ui";
+import { OnboardingWizard } from "@/components/landing/onboarding-wizard";
 
 export function LandingView() {
   const { setView, setCurrentAudit } = useAppStore();
   const [url, setUrl] = React.useState("");
   const [running, setRunning] = React.useState(false);
+  const [onboardingOpen, setOnboardingOpen] = React.useState(false);
 
   const runAudit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -146,7 +148,9 @@ export function LandingView() {
       <PricingTeaser onView={() => setView("pricing")} />
 
       {/* CTA */}
-      <FinalCTA onRun={() => { setUrl(""); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
+      <FinalCTA onRun={() => { setUrl(""); window.scrollTo({ top: 0, behavior: "smooth" }); }} onWizard={() => setOnboardingOpen(true)} />
+
+      <OnboardingWizard open={onboardingOpen} onClose={() => setOnboardingOpen(false)} />
     </div>
   );
 }
@@ -403,7 +407,7 @@ function PricingTeaser({ onView }: { onView: () => void }) {
   );
 }
 
-function FinalCTA({ onRun }: { onRun: () => void }) {
+function FinalCTA({ onRun, onWizard }: { onRun: () => void; onWizard: () => void }) {
   const { setView } = useAppStore();
   return (
     <section className="py-16 sm:py-24">
@@ -418,7 +422,10 @@ function FinalCTA({ onRun }: { onRun: () => void }) {
               <Button size="lg" variant="secondary" className="bg-white text-emerald-700 hover:bg-white/90" onClick={onRun}>
                 Run Free Audit <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
-              <Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10 hover:text-white" onClick={() => setView("pricing")}>
+              <Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10 hover:text-white" onClick={onWizard}>
+                <Sparkles className="w-4 h-4 mr-1" /> Guided Setup
+              </Button>
+              <Button size="lg" variant="ghost" className="text-white/70 hover:bg-white/10 hover:text-white" onClick={() => setView("pricing")}>
                 View Pricing
               </Button>
             </div>

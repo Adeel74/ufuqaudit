@@ -19,6 +19,7 @@ import { SeoToolsView } from "@/components/dashboard/seo-tools-view";
 import { KeywordsView } from "@/components/dashboard/keywords-view";
 import { BacklinksView } from "@/components/dashboard/backlinks-view";
 import { ContentView } from "@/components/dashboard/content-view";
+import { LinkGraphView } from "@/components/dashboard/link-graph-view";
 import { ReportsView } from "@/components/reports/reports-view";
 import { AdminView } from "@/components/admin/admin-view";
 import { SettingsView } from "@/components/settings/settings-view";
@@ -91,6 +92,7 @@ export default function Home() {
       case "keywords": return <KeywordsView />;
       case "backlinks": return <BacklinksView />;
       case "content": return <ContentView />;
+      case "link-graph": return <LinkGraphView />;
       case "reports": return <ReportsView />;
       case "admin": return <AdminView />;
       case "settings": return <SettingsView />;
@@ -119,7 +121,7 @@ export default function Home() {
         {/* Main content */}
         <main className="flex-1 min-w-0 overflow-x-hidden">
           <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-            {currentAudit || view === "admin" || view === "settings" || view === "billing" || view === "integrations" || view === "reports" || view === "history" || view === "competitors" || view === "ai-chat" || view === "tools" || view === "keywords" || view === "backlinks" || view === "content" ? (
+            {currentAudit || view === "admin" || view === "settings" || view === "billing" || view === "integrations" || view === "reports" || view === "history" || view === "competitors" || view === "ai-chat" || view === "tools" || view === "keywords" || view === "backlinks" || view === "content" || view === "link-graph" ? (
               renderView()
             ) : (
               <EmptyState onRun={() => setView("landing")} />

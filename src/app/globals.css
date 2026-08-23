@@ -119,6 +119,13 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Zebra striping for data tables — opt-in via the `zebra` class on <tbody> */
+  tbody.zebra > tr:nth-child(even) {
+    @apply bg-muted/30;
+  }
+  tbody.zebra > tr:hover {
+    @apply bg-accent/50;
+  }
 }
 
 /* Print styles for PDF report export */
