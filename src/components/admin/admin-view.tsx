@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import {
   ShieldCheck, RefreshCw, LayoutDashboard, Users, Building2,
   Layers, CreditCard, DollarSign, KeyRound, FileSearch, Settings as SettingsIcon,
-  ListChecks, Gauge, Brain, Server,
+  ListChecks, Gauge, Brain, Server, FileText, Mail, UserPlus, Ticket, Megaphone,
 } from "lucide-react";
 import { AdminDashboardSection } from "./sections/admin-dashboard-section";
 import { AdminUsersSection } from "./sections/admin-users-section";
@@ -24,6 +24,12 @@ import { AdminScoringSection } from "./sections/admin-scoring-section";
 import { AdminAIModelsSection } from "./sections/admin-ai-models-section";
 import { AdminAICostsSection } from "./sections/admin-ai-costs-section";
 import { AdminCrawlerSection } from "./sections/admin-crawler-section";
+import { AdminBlogSection } from "./sections/admin-blog-section";
+import { AdminCampaignsSection } from "./sections/admin-campaigns-section";
+import { AdminLeadsSection } from "./sections/admin-leads-section";
+import { AdminCouponsSection } from "./sections/admin-coupons-section";
+import { AdminAffiliatesSection } from "./sections/admin-affiliates-section";
+import { AdminAnnouncementsSection } from "./sections/admin-announcements-section";
 
 const TABS = [
   { value: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -40,6 +46,12 @@ const TABS = [
   { value: "ai-models", label: "AI Models", icon: Brain },
   { value: "ai-costs", label: "AI Costs", icon: DollarSign },
   { value: "crawler", label: "Crawler", icon: Server },
+  { value: "blog", label: "Blog", icon: FileText },
+  { value: "campaigns", label: "Campaigns", icon: Mail },
+  { value: "leads", label: "Leads", icon: UserPlus },
+  { value: "coupons", label: "Coupons", icon: Ticket },
+  { value: "affiliates", label: "Affiliates", icon: Users },
+  { value: "announcements", label: "Announcements", icon: Megaphone },
 ] as const;
 
 export function AdminView() {
@@ -124,6 +136,24 @@ export function AdminView() {
         </TabsContent>
         <TabsContent value="crawler" className="mt-6">
           {tab === "crawler" ? <AdminCrawlerSection refreshKey={refreshKey} /> : null}
+        </TabsContent>
+        <TabsContent value="blog" className="mt-6">
+          {tab === "blog" ? <AdminBlogSection refreshKey={refreshKey} /> : null}
+        </TabsContent>
+        <TabsContent value="campaigns" className="mt-6">
+          {tab === "campaigns" ? <AdminCampaignsSection refreshKey={refreshKey} /> : null}
+        </TabsContent>
+        <TabsContent value="leads" className="mt-6">
+          {tab === "leads" ? <AdminLeadsSection refreshKey={refreshKey} /> : null}
+        </TabsContent>
+        <TabsContent value="coupons" className="mt-6">
+          {tab === "coupons" ? <AdminCouponsSection refreshKey={refreshKey} /> : null}
+        </TabsContent>
+        <TabsContent value="affiliates" className="mt-6">
+          {tab === "affiliates" ? <AdminAffiliatesSection refreshKey={refreshKey} /> : null}
+        </TabsContent>
+        <TabsContent value="announcements" className="mt-6">
+          {tab === "announcements" ? <AdminAnnouncementsSection refreshKey={refreshKey} /> : null}
         </TabsContent>
       </Tabs>
     </div>

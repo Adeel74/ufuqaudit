@@ -1,0 +1,778 @@
+     1→"use client";
+     2→
+     3→import * as React from "react";
+     4→import { ViewHeader, StatCard } from "@/components/dashboard/shared";
+     5→import { Card } from "@/components/ui/card";
+     6→import { Button } from "@/components/ui/button";
+     7→import { Input } from "@/components/ui/input";
+     8→import { Label } from "@/components/ui/label";
+     9→import { Badge } from "@/components/ui/badge";
+    10→import { Checkbox } from "@/components/ui/checkbox";
+    11→import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+    12→import {
+    13→  Table,
+    14→  TableBody,
+    15→  TableCell,
+    16→  TableHead,
+    17→  TableHeader,
+    18→  TableRow,
+    19→} from "@/components/ui/table";
+    20→import {
+    21→  Dialog,
+    22→  DialogClose,
+    23→  DialogContent,
+    24→  DialogFooter,
+    25→  DialogHeader,
+    26→  DialogTitle,
+    27→} from "@/components/ui/dialog";
+    28→import {
+    29→  AlertDialog,
+    30→  AlertDialogAction,
+    31→  AlertDialogCancel,
+    32→  AlertDialogContent,
+    33→  AlertDialogDescription,
+    34→  AlertDialogFooter,
+    35→  AlertDialogHeader,
+    36→  AlertDialogTitle,
+    37→} from "@/components/ui/alert-dialog";
+    38→import {
+    39→  DropdownMenu,
+    40→  DropdownMenuContent,
+    41→  DropdownMenuItem,
+    42→  DropdownMenuLabel,
+    43→  DropdownMenuSeparator,
+    44→  DropdownMenuSub,
+    45→  DropdownMenuSubContent,
+    46→  DropdownMenuSubTrigger,
+    47→  DropdownMenuTrigger,
+    48→} from "@/components/ui/dropdown-menu";
+    49→import {
+    50→  Sheet,
+    51→  SheetContent,
+    52→  SheetHeader,
+    53→  SheetTitle,
+    54→  SheetDescription,
+    55→} from "@/components/ui/sheet";
+    56→import {
+    57→  Select,
+    58→  SelectContent,
+    59→  SelectItem,
+    60→  SelectTrigger,
+    61→  SelectValue,
+    62→} from "@/components/ui/select";
+    63→import { toast } from "sonner";
+    64→import {
+    65→  Users, UserCheck, Shield, UserPlus, Plus, MoreVertical, Trash2,
+    66→  UserCog, CreditCard, Loader2, RefreshCw, Search, Eye, KeyRound,
+    67→  Ban, CheckCircle2, Download, Mail,
+    68→} from "lucide-react";
+    69→import {
+    70→  SCROLLBAR_CLS, SkeletonRows, EmptyState,
+    71→  EMERALD_BTN,
+    72→  type AdminUser,
+    73→  formatDateLong, relativeTime, formatCompact,
+    74→  planBadgeClass, roleBadgeClass, initials, downloadCsv,
+    75→} from "../admin-helpers";
+    76→
+    77→const ROLES = ["user", "admin"] as const;
+    78→const PLANS = ["free", "starter", "pro", "agency"] as const;
+    79→
+    80→type SortKey = "date" | "name" | "plan";
+    81→
+    82→interface EnrichedUser extends AdminUser {
+    83→  status: "active" | "suspended";
+    84→  projects: number;
+    85→  audits: number;
+    86→  apiUsage: number;
+    87→  aiUsage: number;
+    88→  lastLogin: string;
+    89→}
+    90→
+    91→function enrichUsers(users: AdminUser[]): EnrichedUser[] {
+    92→  // Mock enrichment — would come from richer API in production
+    93→  return users.map((u, i) => {
+    94→    const seed = u.id.charCodeAt(0) + u.id.charCodeAt(u.id.length - 1) + i;
+    95→    return {
+    96→      ...u,
+    97→      status: u.role === "admin" ? "active" : seed % 7 === 0 ? "suspended" : "active",
+    98→      projects: seed % 12,
+    99→      audits: seed % 40,
+   100→      apiUsage: 100 + (seed * 37) % 5000,
+   101→      aiUsage: 1000 + (seed * 191) % 40000,
+   102→      lastLogin: new Date(Date.now() - (seed % 14) * 86_400_000).toISOString(),
+   103→    };
+   104→  });
+   105→}
+   106→
+   107→export function AdminUsersSection({ refreshKey }: { refreshKey: number }) {
+   108→  const [users, setUsers] = React.useState<EnrichedUser[]>([]);
+   109→  const [loading, setLoading] = React.useState(true);
+   110→  const [totalUsers, setTotalUsers] = React.useState(0);
+   111→  const [newThisMonth, setNewThisMonth] = React.useState(0);
+   112→  const [adminCount, setAdminCount] = React.useState(0);
+   113→  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+   114→
+   115→  const [search, setSearch] = React.useState("");
+   116→  const [roleFilter, setRoleFilter] = React.useState<"all" | "admin" | "user">("all");
+   117→  const [planFilter, setPlanFilter] = React.useState<"all" | (typeof PLANS)[number]>("all");
+   118→  const [sort, setSort] = React.useState<SortKey>("date");
+   119→
+   120→  const [addOpen, setAddOpen] = React.useState(false);
+   121→  const [userToDelete, setUserToDelete] = React.useState<EnrichedUser | null>(null);
+   122→  const [profileUser, setProfileUser] = React.useState<EnrichedUser | null>(null);
+   123→  const [deleting, setDeleting] = React.useState(false);
+   124→
+   125→  const load = React.useCallback(async () => {
+   126→    setLoading(true);
+   127→    try {
+   128→      const r = await fetch("/api/admin/stats").then((r) => r.json());
+   129→      setTotalUsers(r.counts?.users ?? 0);
+   130→      setNewThisMonth(r.counts?.usersThisMonth ?? 0);
+   131→    } catch (e) {
+   132→      console.error(e);
+   133→    }
+   134→    try {
+   135→      const r = await fetch("/api/admin/users").then((r) => r.json() as Promise<{ users: AdminUser[] }>);
+   136→      const enriched = enrichUsers(r.users ?? []);
+   137→      setUsers(enriched);
+   138→      setAdminCount(enriched.filter((u) => u.role === "admin").length);
+   139→    } catch (e) {
+   140→      console.error(e);
+   141→      toast.error("Failed to load users");
+   142→    } finally {
+   143→      setLoading(false);
+   144→    }
+   145→  }, []);
+   146→
+   147→  React.useEffect(() => {
+   148→    void load();
+   149→  }, [load, refreshKey]);
+   150→
+   151→  async function patchUser(id: string, patch: { role?: string; plan?: string }) {
+   152→    try {
+   153→      const res = await fetch("/api/admin/users", {
+   154→        method: "PATCH",
+   155→        headers: { "Content-Type": "application/json" },
+   156→        body: JSON.stringify({ id, ...patch }),
+   157→      });
+   158→      if (!res.ok) throw new Error("patch failed");
+   159→      toast.success("User updated");
+   160→      void load();
+   161→    } catch (e) {
+   162→      console.error(e);
+   163→      toast.error("Failed to update user");
+   164→    }
+   165→  }
+   166→
+   167→  async function deleteUser() {
+   168→    if (!userToDelete) return;
+   169→    setDeleting(true);
+   170→    try {
+   171→      const res = await fetch(`/api/admin/users?id=${encodeURIComponent(userToDelete.id)}`, {
+   172→        method: "DELETE",
+   173→      });
+   174→      if (!res.ok) throw new Error("delete failed");
+   175→      toast.success(`Removed ${userToDelete.email}`);
+   176→      setUserToDelete(null);
+   177→      void load();
+   178→    } catch (e) {
+   179→      console.error(e);
+   180→      toast.error("Failed to delete user");
+   181→    } finally {
+   182→      setDeleting(false);
+   183→    }
+   184→  }
+   185→
+   186→  // ---- Filter + sort ----
+   187→  const filtered = React.useMemo(() => {
+   188→    let list = users;
+   189→    const q = search.trim().toLowerCase();
+   190→    if (q) list = list.filter((u) => (u.name ?? "").toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
+   191→    if (roleFilter !== "all") list = list.filter((u) => u.role === roleFilter);
+   192→    if (planFilter !== "all") list = list.filter((u) => u.plan === planFilter);
+   193→    list = [...list].sort((a, b) => {
+   194→      if (sort === "name") return (a.name ?? a.email).localeCompare(b.name ?? b.email);
+   195→      if (sort === "plan") return (a.plan).localeCompare(b.plan);
+   196→      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+   197→    });
+   198→    return list;
+   199→  }, [users, search, roleFilter, planFilter, sort]);
+   200→
+   201→  // ---- Bulk actions ----
+   202→  function toggleOne(id: string) {
+   203→    setSelected((prev) => {
+   204→      const next = new Set(prev);
+   205→      if (next.has(id)) next.delete(id);
+   206→      else next.add(id);
+   207→      return next;
+   208→    });
+   209→  }
+   210→  function toggleAll() {
+   211→    if (selected.size === filtered.length) setSelected(new Set());
+   212→    else setSelected(new Set(filtered.map((u) => u.id)));
+   213→  }
+   214→  function bulkAction(action: "suspend" | "activate" | "export") {
+   215→    if (selected.size === 0) return;
+   216→    if (action === "export") {
+   217→      const rows = filtered
+   218→        .filter((u) => selected.has(u.id))
+   219→        .map((u) => ({
+   220→          id: u.id, name: u.name ?? "", email: u.email, role: u.role, plan: u.plan,
+   221→          status: u.status, projects: u.projects, audits: u.audits,
+   222→          apiUsage: u.apiUsage, aiUsage: u.aiUsage, createdAt: u.createdAt,
+   223→        }));
+   224→      downloadCsv(rows, `users-${Date.now()}.csv`);
+   225→      toast.success(`Exported ${rows.length} users to CSV`);
+   226→      return;
+   227→    }
+   228→    toast.success(`${action === "suspend" ? "Suspended" : "Activated"} ${selected.size} user(s)`, {
+   229→      description: "Bulk action simulated in this preview build",
+   230→    });
+   231→    setSelected(new Set());
+   232→  }
+   233→
+   234→  return (
+   235→    <div className="space-y-6">
+   236→      <ViewHeader
+   237→        title="User Management"
+   238→        subtitle="Manage all platform users, roles, and plans"
+   239→        icon={Users}
+   240→        actions={
+   241→          <>
+   242→            <Button variant="outline" size="sm" onClick={() => load()}>
+   243→              <RefreshCw className="w-3.5 h-3.5 mr-1" /> Refresh
+   244→            </Button>
+   245→            <Button size="sm" className={EMERALD_BTN} onClick={() => setAddOpen(true)}>
+   246→              <Plus className="w-3.5 h-3.5 mr-1" /> Add user
+   247→            </Button>
+   248→          </>
+   249→        }
+   250→      />
+   251→
+   252→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+   253→        <StatCard label="Total Users" value={totalUsers} icon={Users} color="#10b981" />
+   254→        <StatCard label="Active" value={Math.round(totalUsers * 0.65)} hint="~65% active" icon={UserCheck} color="#10b981" />
+   255→        <StatCard label="Admins" value={adminCount} icon={Shield} color="#14b8a6" />
+   256→        <StatCard label="New This Month" value={newThisMonth} icon={UserPlus} color="#f59e0b" />
+   257→      </div>
+   258→
+   259→      {/* Filter bar */}
+   260→      <Card className="p-4">
+   261→        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+   262→          <div className="relative flex-1">
+   263→            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+   264→            <Input
+   265→              placeholder="Search by name or email…"
+   266→              value={search}
+   267→              onChange={(e) => setSearch(e.target.value)}
+   268→              className="pl-8"
+   269→            />
+   270→          </div>
+   271→          <div className="flex flex-wrap items-center gap-2">
+   272→            <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as typeof roleFilter)}>
+   273→              <SelectTrigger className="w-[130px]">
+   274→                <SelectValue placeholder="Role" />
+   275→              </SelectTrigger>
+   276→              <SelectContent>
+   277→                <SelectItem value="all">All roles</SelectItem>
+   278→                <SelectItem value="admin">Admin</SelectItem>
+   279→                <SelectItem value="user">User</SelectItem>
+   280→              </SelectContent>
+   281→            </Select>
+   282→            <Select value={planFilter} onValueChange={(v) => setPlanFilter(v as typeof planFilter)}>
+   283→              <SelectTrigger className="w-[130px]">
+   284→                <SelectValue placeholder="Plan" />
+   285→              </SelectTrigger>
+   286→              <SelectContent>
+   287→                <SelectItem value="all">All plans</SelectItem>
+   288→                {PLANS.map((p) => (
+   289→                  <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>
+   290→                ))}
+   291→              </SelectContent>
+   292→            </Select>
+   293→            <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+   294→              <SelectTrigger className="w-[140px]">
+   295→                <SelectValue placeholder="Sort" />
+   296→              </SelectTrigger>
+   297→              <SelectContent>
+   298→                <SelectItem value="date">Sort: Newest</SelectItem>
+   299→                <SelectItem value="name">Sort: Name</SelectItem>
+   300→                <SelectItem value="plan">Sort: Plan</SelectItem>
+   301→              </SelectContent>
+   302→            </Select>
+   303→          </div>
+   304→        </div>
+   305→      </Card>
+   306→
+   307→      {/* Bulk actions bar */}
+   308→      {selected.size > 0 && (
+   309→        <div className="flex flex-wrap items-center gap-3 p-3 rounded-lg border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40">
+   310→          <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+   311→            {selected.size} selected
+   312→          </span>
+   313→          <div className="h-4 w-px bg-emerald-200 dark:bg-emerald-800" />
+   314→          <Button size="sm" variant="outline" onClick={() => bulkAction("suspend")}>
+   315→            <Ban className="w-3.5 h-3.5 mr-1" /> Suspend
+   316→          </Button>
+   317→          <Button size="sm" variant="outline" onClick={() => bulkAction("activate")}>
+   318→            <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Activate
+   319→          </Button>
+   320→          <Button size="sm" variant="outline" onClick={() => bulkAction("export")}>
+   321→            <Download className="w-3.5 h-3.5 mr-1" /> Export CSV
+   322→          </Button>
+   323→          <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+   324→            Clear
+   325→          </Button>
+   326→        </div>
+   327→      )}
+   328→
+   329→      {/* Users table */}
+   330→      <Card className="p-5">
+   331→        <h3 className="font-semibold flex items-center gap-2 mb-3">
+   332→          <Users className="w-4 h-4 text-emerald-600" /> Users
+   333→          <Badge variant="secondary" className="ml-1">{filtered.length}</Badge>
+   334→        </h3>
+   335→        <div className={`-mx-2 px-2 ${SCROLLBAR_CLS} max-h-[60vh]`}>
+   336→          {loading ? (
+   337→            <SkeletonRows rows={6} cols={10} />
+   338→          ) : filtered.length === 0 ? (
+   339→            <EmptyState msg="No users match your filters" icon={Users} />
+   340→          ) : (
+   341→            <Table>
+   342→              <TableHeader>
+   343→                <TableRow>
+   344→                  <TableHead className="w-10">
+   345→                    <Checkbox
+   346→                      checked={selected.size === filtered.length && filtered.length > 0}
+   347→                      onCheckedChange={toggleAll}
+   348→                    />
+   349→                  </TableHead>
+   350→                  <TableHead className="min-w-[180px]">User</TableHead>
+   351→                  <TableHead>Role</TableHead>
+   352→                  <TableHead>Plan</TableHead>
+   353→                  <TableHead>Status</TableHead>
+   354→                  <TableHead className="text-right">Projects</TableHead>
+   355→                  <TableHead className="text-right">Audits</TableHead>
+   356→                  <TableHead className="text-right">API Usage</TableHead>
+   357→                  <TableHead className="text-right">AI Usage</TableHead>
+   358→                  <TableHead className="whitespace-nowrap">Created</TableHead>
+   359→                  <TableHead className="whitespace-nowrap">Last Login</TableHead>
+   360→                  <TableHead className="text-right">Actions</TableHead>
+   361→                </TableRow>
+   362→              </TableHeader>
+   363→              <TableBody className="zebra">
+   364→                {filtered.map((u) => (
+   365→                  <TableRow key={u.id} data-state={selected.has(u.id) ? "selected" : undefined}>
+   366→                    <TableCell>
+   367→                      <Checkbox
+   368→                        checked={selected.has(u.id)}
+   369→                        onCheckedChange={() => toggleOne(u.id)}
+   370→                      />
+   371→                    </TableCell>
+   372→                    <TableCell>
+   373→                      <div className="flex items-center gap-2">
+   374→                        <Avatar className="w-8 h-8">
+   375→                          <AvatarFallback className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 text-xs font-semibold">
+   376→                            {initials(u.name, u.email)}
+   377→                          </AvatarFallback>
+   378→                        </Avatar>
+   379→                        <div className="min-w-0">
+   380→                          <div className="font-medium text-sm truncate">{u.name ?? u.email}</div>
+   381→                          <div className="text-xs text-muted-foreground truncate">{u.email}</div>
+   382→                        </div>
+   383→                      </div>
+   384→                    </TableCell>
+   385→                    <TableCell>
+   386→                      <Badge variant="outline" className={`capitalize ${roleBadgeClass(u.role)}`}>
+   387→                        {u.role}
+   388→                      </Badge>
+   389→                    </TableCell>
+   390→                    <TableCell>
+   391→                      <Badge variant="outline" className={`capitalize ${planBadgeClass(u.plan)}`}>
+   392→                        {u.plan}
+   393→                      </Badge>
+   394→                    </TableCell>
+   395→                    <TableCell>
+   396→                      {u.status === "active" ? (
+   397→                        <span className="inline-flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-400">
+   398→                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active
+   399→                        </span>
+   400→                      ) : (
+   401→                        <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+   402→                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400" /> Suspended
+   403→                        </span>
+   404→                      )}
+   405→                    </TableCell>
+   406→                    <TableCell className="text-right tabular-nums">{u.projects}</TableCell>
+   407→                    <TableCell className="text-right tabular-nums">{u.audits}</TableCell>
+   408→                    <TableCell className="text-right tabular-nums text-xs">{formatCompact(u.apiUsage)}</TableCell>
+   409→                    <TableCell className="text-right tabular-nums text-xs">{formatCompact(u.aiUsage)}</TableCell>
+   410→                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{formatDateLong(u.createdAt)}</TableCell>
+   411→                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{relativeTime(u.lastLogin)}</TableCell>
+   412→                    <TableCell className="text-right">
+   413→                      <DropdownMenu>
+   414→                        <DropdownMenuTrigger asChild>
+   415→                          <Button variant="ghost" size="icon" className="h-7 w-7">
+   416→                            <MoreVertical className="w-4 h-4" />
+   417→                          </Button>
+   418→                        </DropdownMenuTrigger>
+   419→                        <DropdownMenuContent align="end" className="w-48">
+   420→                          <DropdownMenuLabel>Manage user</DropdownMenuLabel>
+   421→                          <DropdownMenuSeparator />
+   422→                          <DropdownMenuItem onClick={() => setProfileUser(u)}>
+   423→                            <Eye className="w-3.5 h-3.5 mr-2" /> View profile
+   424→                          </DropdownMenuItem>
+   425→                          <DropdownMenuItem onClick={() => toast.info("Edit dialog (demo)")}>
+   426→                            <UserCog className="w-3.5 h-3.5 mr-2" /> Edit
+   427→                          </DropdownMenuItem>
+   428→                          <DropdownMenuItem onClick={() => toast.success(u.status === "active" ? "User suspended (demo)" : "User activated (demo)")}>
+   429→                            {u.status === "active" ? (
+   430→                              <>
+   431→                                <Ban className="w-3.5 h-3.5 mr-2" /> Suspend
+   432→                              </>
+   433→                            ) : (
+   434→                              <>
+   435→                                <CheckCircle2 className="w-3.5 h-3.5 mr-2" /> Activate
+   436→                              </>
+   437→                            )}
+   438→                          </DropdownMenuItem>
+   439→                          <DropdownMenuSub>
+   440→                            <DropdownMenuSubTrigger className="flex items-center gap-2">
+   441→                              <CreditCard className="w-3.5 h-3.5" /> Change plan
+   442→                            </DropdownMenuSubTrigger>
+   443→                            <DropdownMenuSubContent>
+   444→                              {PLANS.map((p) => (
+   445→                                <DropdownMenuItem
+   446→                                  key={p}
+   447→                                  onClick={() => patchUser(u.id, { plan: p })}
+   448→                                  className="capitalize"
+   449→                                >
+   450→                                  {p}
+   451→                                  {u.plan === p && (
+   452→                                    <span className="ml-auto text-emerald-600">●</span>
+   453→                                  )}
+   454→                                </DropdownMenuItem>
+   455→                              ))}
+   456→                            </DropdownMenuSubContent>
+   457→                          </DropdownMenuSub>
+   458→                          <DropdownMenuSub>
+   459→                            <DropdownMenuSubTrigger className="flex items-center gap-2">
+   460→                              <Shield className="w-3.5 h-3.5" /> Change role
+   461→                            </DropdownMenuSubTrigger>
+   462→                            <DropdownMenuSubContent>
+   463→                              {ROLES.map((r) => (
+   464→                                <DropdownMenuItem
+   465→                                  key={r}
+   466→                                  onClick={() => patchUser(u.id, { role: r })}
+   467→                                  className="capitalize"
+   468→                                >
+   469→                                  {r}
+   470→                                  {u.role === r && (
+   471→                                    <span className="ml-auto text-emerald-600">●</span>
+   472→                                  )}
+   473→                                </DropdownMenuItem>
+   474→                              ))}
+   475→                            </DropdownMenuSubContent>
+   476→                          </DropdownMenuSub>
+   477→                          <DropdownMenuItem onClick={() => toast.success("Password reset email sent (demo)")}>
+   478→                            <KeyRound className="w-3.5 h-3.5 mr-2" /> Reset password
+   479→                          </DropdownMenuItem>
+   480→                          <DropdownMenuSeparator />
+   481→                          <DropdownMenuItem
+   482→                            variant="destructive"
+   483→                            onClick={() => setUserToDelete(u)}
+   484→                            className="flex items-center gap-2"
+   485→                          >
+   486→                            <Trash2 className="w-3.5 h-3.5" /> Delete user
+   487→                          </DropdownMenuItem>
+   488→                        </DropdownMenuContent>
+   489→                      </DropdownMenu>
+   490→                    </TableCell>
+   491→                  </TableRow>
+   492→                ))}
+   493→              </TableBody>
+   494→            </Table>
+   495→          )}
+   496→        </div>
+   497→      </Card>
+   498→
+   499→      <AddUserDialog
+   500→        open={addOpen}
+   501→        onOpenChange={setAddOpen}
+   502→        onCreated={() => void load()}
+   503→      />
+   504→
+   505→      {/* Profile sheet */}
+   506→      <Sheet open={!!profileUser} onOpenChange={(o) => { if (!o) setProfileUser(null); }}>
+   507→        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+   508→          {profileUser && (
+   509→            <>
+   510→              <SheetHeader>
+   511→                <SheetTitle className="flex items-center gap-3">
+   512→                  <Avatar className="w-10 h-10">
+   513→                    <AvatarFallback className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+   514→                      {initials(profileUser.name, profileUser.email)}
+   515→                    </AvatarFallback>
+   516→                  </Avatar>
+   517→                  <div>
+   518→                    <div className="text-base font-semibold">{profileUser.name ?? "Unnamed user"}</div>
+   519→                    <div className="text-xs font-normal text-muted-foreground">{profileUser.email}</div>
+   520→                  </div>
+   521→                </SheetTitle>
+   522→                <SheetDescription>
+   523→                  User ID <span className="font-mono">{profileUser.id}</span>
+   524→                </SheetDescription>
+   525→              </SheetHeader>
+   526→
+   527→              <div className="px-4 pb-4 space-y-4">
+   528→                <div className="grid grid-cols-2 gap-3">
+   529→                  <div className="p-3 rounded-lg border bg-card">
+   530→                    <div className="text-[10px] text-muted-foreground">Role</div>
+   531→                    <Badge variant="outline" className={`mt-1 capitalize ${roleBadgeClass(profileUser.role)}`}>
+   532→                      {profileUser.role}
+   533→                    </Badge>
+   534→                  </div>
+   535→                  <div className="p-3 rounded-lg border bg-card">
+   536→                    <div className="text-[10px] text-muted-foreground">Plan</div>
+   537→                    <Badge variant="outline" className={`mt-1 capitalize ${planBadgeClass(profileUser.plan)}`}>
+   538→                      {profileUser.plan}
+   539→                    </Badge>
+   540→                  </div>
+   541→                  <div className="p-3 rounded-lg border bg-card">
+   542→                    <div className="text-[10px] text-muted-foreground">Status</div>
+   543→                    <div className="text-sm font-medium mt-1 capitalize">
+   544→                      {profileUser.status}
+   545→                    </div>
+   546→                  </div>
+   547→                  <div className="p-3 rounded-lg border bg-card">
+   548→                    <div className="text-[10px] text-muted-foreground">Created</div>
+   549→                    <div className="text-sm font-medium mt-1">{formatDateLong(profileUser.createdAt)}</div>
+   550→                  </div>
+   551→                </div>
+   552→
+   553→                <div className="p-4 rounded-lg border bg-card">
+   554→                  <div className="text-sm font-semibold mb-3">Usage meters</div>
+   555→                  <UsageMeter label="Projects" value={profileUser.projects} max={50} color="#10b981" />
+   556→                  <UsageMeter label="Audits" value={profileUser.audits} max={100} color="#14b8a6" />
+   557→                  <UsageMeter label="API requests" value={profileUser.apiUsage} max={10000} color="#f59e0b" format />
+   558→                  <UsageMeter label="AI tokens" value={profileUser.aiUsage} max={100000} color="#8b5cf6" format />
+   559→                </div>
+   560→
+   561→                <div className="p-4 rounded-lg border bg-card">
+   562→                  <div className="text-sm font-semibold mb-3">API keys</div>
+   563→                  <div className="space-y-2">
+   564→                    {["Production API", "Development"].map((n) => (
+   565→                      <div key={n} className="flex items-center justify-between text-xs">
+   566→                        <span className="inline-flex items-center gap-2">
+   567→                          <KeyRound className="w-3 h-3 text-muted-foreground" /> {n}
+   568→                        </span>
+   569→                        <Badge variant="outline" className="text-emerald-700 border-emerald-200 dark:text-emerald-300 dark:border-emerald-800">
+   570→                          Active
+   571→                        </Badge>
+   572→                      </div>
+   573→                    ))}
+   574→                  </div>
+   575→                </div>
+   576→
+   577→                <div className="p-4 rounded-lg border bg-card">
+   578→                  <div className="text-sm font-semibold mb-3">Login history</div>
+   579→                  <div className="space-y-1.5 text-xs">
+   580→                    {[
+   581→                      { date: "Today, 9:42 AM", ip: "182.71.0.1", loc: "Lahore, PK" },
+   582→                      { date: "Yesterday, 5:21 PM", ip: "182.71.0.1", loc: "Lahore, PK" },
+   583→                      { date: "2 days ago", ip: "74.6.18.42", loc: "San Jose, US" },
+   584→                    ].map((h) => (
+   585→                      <div key={h.date} className="flex items-center justify-between">
+   586→                        <span>{h.date}</span>
+   587→                        <span className="text-muted-foreground">{h.ip} · {h.loc}</span>
+   588→                      </div>
+   589→                    ))}
+   590→                  </div>
+   591→                </div>
+   592→
+   593→                <div className="flex gap-2">
+   594→                  <Button size="sm" className={`flex-1 ${EMERALD_BTN}`} onClick={() => toast.info("Edit dialog (demo)")}>
+   595→                    <UserCog className="w-3.5 h-3.5 mr-1" /> Edit user
+   596→                  </Button>
+   597→                  <Button size="sm" variant="outline" onClick={() => toast.success("Password reset email sent (demo)")}>
+   598→                    <Mail className="w-3.5 h-3.5 mr-1" /> Reset
+   599→                  </Button>
+   600→                </div>
+   601→              </div>
+   602→            </>
+   603→          )}
+   604→        </SheetContent>
+   605→      </Sheet>
+   606→
+   607→      <AlertDialog open={!!userToDelete} onOpenChange={(o) => { if (!o) setUserToDelete(null); }}>
+   608→        <AlertDialogContent>
+   609→          <AlertDialogHeader>
+   610→            <AlertDialogTitle>Delete user?</AlertDialogTitle>
+   611→            <AlertDialogDescription>
+   612→              This will permanently delete{" "}
+   613→              <span className="font-medium text-foreground">{userToDelete?.email}</span> and remove their
+   614→              access. This action cannot be undone.
+   615→            </AlertDialogDescription>
+   616→          </AlertDialogHeader>
+   617→          <AlertDialogFooter>
+   618→            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+   619→            <AlertDialogAction
+   620→              onClick={(e) => {
+   621→                e.preventDefault();
+   622→                void deleteUser();
+   623→              }}
+   624→              disabled={deleting}
+   625→              className="bg-red-600 hover:bg-red-700 text-white"
+   626→            >
+   627→              {deleting && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+   628→              Delete
+   629→            </AlertDialogAction>
+   630→          </AlertDialogFooter>
+   631→        </AlertDialogContent>
+   632→      </AlertDialog>
+   633→    </div>
+   634→  );
+   635→}
+   636→
+   637→function UsageMeter({ label, value, max, color, format }: {
+   638→  label: string; value: number; max: number; color: string; format?: boolean;
+   639→}) {
+   640→  const pct = Math.min(100, Math.round((value / max) * 100));
+   641→  return (
+   642→    <div className="mb-3 last:mb-0">
+   643→      <div className="flex items-center justify-between text-xs mb-1">
+   644→        <span className="text-muted-foreground">{label}</span>
+   645→        <span className="tabular-nums font-medium">
+   646→          {format ? formatCompact(value) : value} / {format ? formatCompact(max) : max}
+   647→        </span>
+   648→      </div>
+   649→      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+   650→        <div
+   651→          className="h-full rounded-full transition-all"
+   652→          style={{ width: `${pct}%`, backgroundColor: color }}
+   653→        />
+   654→      </div>
+   655→    </div>
+   656→  );
+   657→}
+   658→
+   659→function AddUserDialog({
+   660→  open,
+   661→  onOpenChange,
+   662→  onCreated,
+   663→}: {
+   664→  open: boolean;
+   665→  onOpenChange: (o: boolean) => void;
+   666→  onCreated: () => void;
+   667→}) {
+   668→  const [email, setEmail] = React.useState("");
+   669→  const [name, setName] = React.useState("");
+   670→  const [role, setRole] = React.useState<string>("user");
+   671→  const [plan, setPlan] = React.useState<string>("free");
+   672→  const [saving, setSaving] = React.useState(false);
+   673→
+   674→  async function submit() {
+   675→    if (!email.trim()) {
+   676→      toast.error("Email is required");
+   677→      return;
+   678→    }
+   679→    setSaving(true);
+   680→    try {
+   681→      const res = await fetch("/api/admin/users", {
+   682→        method: "POST",
+   683→        headers: { "Content-Type": "application/json" },
+   684→        body: JSON.stringify({
+   685→          email: email.trim(),
+   686→          name: name.trim() || undefined,
+   687→          role,
+   688→          plan,
+   689→        }),
+   690→      });
+   691→      if (!res.ok) {
+   692→        const err = (await res.json().catch(() => ({}))) as { error?: string };
+   693→        throw new Error(err.error ?? "create failed");
+   694→      }
+   695→      toast.success("User created");
+   696→      setEmail("");
+   697→      setName("");
+   698→      setRole("user");
+   699→      setPlan("free");
+   700→      onOpenChange(false);
+   701→      onCreated();
+   702→    } catch (e) {
+   703→      console.error(e);
+   704→      toast.error(e instanceof Error ? e.message : "Failed to create user");
+   705→    } finally {
+   706→      setSaving(false);
+   707→    }
+   708→  }
+   709→
+   710→  return (
+   711→    <Dialog open={open} onOpenChange={onOpenChange}>
+   712→      <DialogContent className="sm:max-w-md">
+   713→        <DialogHeader>
+   714→          <DialogTitle>Add new user</DialogTitle>
+   715→        </DialogHeader>
+   716→        <div className="grid gap-3">
+   717→          <div className="grid gap-1.5">
+   718→            <Label htmlFor="au-email">Email</Label>
+   719→            <Input
+   720→              id="au-email"
+   721→              type="email"
+   722→              placeholder="user@example.com"
+   723→              value={email}
+   724→              onChange={(e) => setEmail(e.target.value)}
+   725→            />
+   726→          </div>
+   727→          <div className="grid gap-1.5">
+   728→            <Label htmlFor="au-name">Name (optional)</Label>
+   729→            <Input
+   730→              id="au-name"
+   731→              placeholder="Jane Doe"
+   732→              value={name}
+   733→              onChange={(e) => setName(e.target.value)}
+   734→            />
+   735→          </div>
+   736→          <div className="grid grid-cols-2 gap-3">
+   737→            <div className="grid gap-1.5">
+   738→              <Label>Role</Label>
+   739→              <Select value={role} onValueChange={setRole}>
+   740→                <SelectTrigger className="w-full">
+   741→                  <SelectValue />
+   742→                </SelectTrigger>
+   743→                <SelectContent>
+   744→                  {ROLES.map((r) => (
+   745→                    <SelectItem key={r} value={r} className="capitalize">{r}</SelectItem>
+   746→                  ))}
+   747→                </SelectContent>
+   748→              </Select>
+   749→            </div>
+   750→            <div className="grid gap-1.5">
+   751→              <Label>Plan</Label>
+   752→              <Select value={plan} onValueChange={setPlan}>
+   753→                <SelectTrigger className="w-full">
+   754→                  <SelectValue />
+   755→                </SelectTrigger>
+   756→                <SelectContent>
+   757→                  {PLANS.map((p) => (
+   758→                    <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>
+   759→                  ))}
+   760→                </SelectContent>
+   761→              </Select>
+   762→            </div>
+   763→          </div>
+   764→        </div>
+   765→        <DialogFooter>
+   766→          <DialogClose asChild>
+   767→            <Button variant="outline" disabled={saving}>Cancel</Button>
+   768→          </DialogClose>
+   769→          <Button onClick={submit} disabled={saving} className={EMERALD_BTN}>
+   770→            {saving && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+   771→            Create user
+   772→          </Button>
+   773→        </DialogFooter>
+   774→      </DialogContent>
+   775→    </Dialog>
+   776→  );
+   777→}
+   778→

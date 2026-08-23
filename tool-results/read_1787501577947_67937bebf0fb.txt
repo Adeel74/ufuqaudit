@@ -1,0 +1,714 @@
+     1→"use client";
+     2→
+     3→import * as React from "react";
+     4→import { ViewHeader, StatCard } from "@/components/dashboard/shared";
+     5→import { Card } from "@/components/ui/card";
+     6→import { Button } from "@/components/ui/button";
+     7→import { Label } from "@/components/ui/label";
+     8→import { Badge } from "@/components/ui/badge";
+     9→import { Slider } from "@/components/ui/slider";
+    10→import { Separator } from "@/components/ui/separator";
+    11→import {
+    12→  Table,
+    13→  TableBody,
+    14→  TableCell,
+    15→  TableHead,
+    16→  TableHeader,
+    17→  TableRow,
+    18→} from "@/components/ui/table";
+    19→import {
+    20→  AlertDialog,
+    21→  AlertDialogAction,
+    22→  AlertDialogCancel,
+    23→  AlertDialogContent,
+    24→  AlertDialogDescription,
+    25→  AlertDialogFooter,
+    26→  AlertDialogHeader,
+    27→  AlertDialogTitle,
+    28→} from "@/components/ui/alert-dialog";
+    29→import { toast } from "sonner";
+    30→import {
+    31→  Server, RefreshCw, Pause, Play, Square, Eye, RotateCcw,
+    32→  CheckCircle2, XCircle, Clock, AlertTriangle, Cpu, MemoryStick,
+    33→  HardDrive, Network, Database, Activity, ListChecks, Loader2,
+    34→} from "lucide-react";
+    35→import {
+    36→  SCROLLBAR_CLS, SkeletonRows, EmptyState, EMERALD_BTN,
+    37→  relativeTime, formatDuration, formatCompact, truncate, scoreHex,
+    38→} from "../admin-helpers";
+    39→
+    40→// ----- API types -----
+    41→interface CrawlStats {
+    42→  running: number;
+    43→  queued: number;
+    44→  completed: number;
+    45→  failed: number;
+    46→  totalCpu: number;
+    47→  totalMemory: number;
+    48→}
+    49→
+    50→interface RunningCrawl {
+    51→  id: string;
+    52→  url: string;
+    53→  userId: string;
+    54→  pagesCrawled: number;
+    55→  totalPages: number;
+    56→  progress: number;
+    57→  startedAt: string;
+    58→  cpu: number;
+    59→  memory: number;
+    60→}
+    61→
+    62→interface QueuedCrawl {
+    63→  id: string;
+    64→  url: string;
+    65→  userId: string;
+    66→  position: number;
+    67→  enqueuedAt: string;
+    68→}
+    69→
+    70→interface CompletedCrawl {
+    71→  id: string;
+    72→  url: string;
+    73→  userId: string;
+    74→  pagesCrawled: number;
+    75→  score: number;
+    76→  duration: number;
+    77→  completedAt: string;
+    78→}
+    79→
+    80→interface FailedCrawl {
+    81→  id: string;
+    82→  url: string;
+    83→  userId: string;
+    84→  error: string;
+    85→  failedAt: string;
+    86→}
+    87→
+    88→interface CrawlerMetrics {
+    89→  cpu: number;
+    90→  memory: number;
+    91→  memoryLimit: number;
+    92→  disk: number;
+    93→  diskLimit: number;
+    94→  network: number;
+    95→  queueSize: number;
+    96→  workers: number;
+    97→  maxWorkers: number;
+    98→  dbConnections: number;
+    99→  maxDbConnections: number;
+   100→}
+   101→
+   102→interface CrawlerResponse {
+   103→  stats: CrawlStats;
+   104→  running: RunningCrawl[];
+   105→  queued: QueuedCrawl[];
+   106→  completed: CompletedCrawl[];
+   107→  failed: FailedCrawl[];
+   108→  metrics: CrawlerMetrics;
+   109→}
+   110→
+   111→export function AdminCrawlerSection({ refreshKey }: { refreshKey: number }) {
+   112→  const [data, setData] = React.useState<CrawlerResponse | null>(null);
+   113→  const [loading, setLoading] = React.useState(true);
+   114→  const [cancelCrawl, setCancelCrawl] = React.useState<RunningCrawl | null>(null);
+   115→  const [cancelling, setCancelling] = React.useState(false);
+   116→  // Controls (local-only demo)
+   117→  const [maxConcurrent, setMaxConcurrent] = React.useState(10);
+   118→  const [crawlTimeout, setCrawlTimeout] = React.useState(10000);
+   119→  const [paused, setPaused] = React.useState(false);
+   120→
+   121→  const load = React.useCallback(async () => {
+   122→    setLoading(true);
+   123→    try {
+   124→      const r = await fetch("/api/admin/crawler").then(
+   125→        (r) => r.json() as Promise<CrawlerResponse>,
+   126→      );
+   127→      setData(r);
+   128→    } catch (e) {
+   129→      console.error(e);
+   130→      toast.error("Failed to load crawler data");
+   131→    } finally {
+   132→      setLoading(false);
+   133→    }
+   134→  }, []);
+   135→
+   136→  React.useEffect(() => {
+   137→    void load();
+   138→  }, [load, refreshKey]);
+   139→
+   140→  const stats = data?.stats;
+   141→  const metrics = data?.metrics;
+   142→  const running = data?.running ?? [];
+   143→  const queued = data?.queued ?? [];
+   144→  const completed = data?.completed ?? [];
+   145→  const failed = data?.failed ?? [];
+   146→
+   147→  async function cancelCrawlJob() {
+   148→    if (!cancelCrawl) return;
+   149→    setCancelling(true);
+   150→    await new Promise((r) => setTimeout(r, 500));
+   151→    setData((prev) =>
+   152→      prev
+   153→        ? { ...prev, running: prev.running.filter((c) => c.id !== cancelCrawl.id) }
+   154→        : prev,
+   155→    );
+   156→    toast.success(`Cancelled crawl ${truncate(cancelCrawl.id, 12)}`);
+   157→    setCancelCrawl(null);
+   158→    setCancelling(false);
+   159→  }
+   160→
+   161→  function cancelQueued(item: QueuedCrawl) {
+   162→    setData((prev) =>
+   163→      prev
+   164→        ? { ...prev, queued: prev.queued.filter((c) => c.id !== item.id) }
+   165→        : prev,
+   166→    );
+   167→    toast.success(`Removed queued crawl ${truncate(item.id, 12)}`);
+   168→  }
+   169→
+   170→  function retryFailed(item: FailedCrawl) {
+   171→    toast.success(`Re-enqueued failed crawl ${truncate(item.id, 12)}`);
+   172→    setData((prev) =>
+   173→      prev
+   174→        ? {
+   175→            ...prev,
+   176→            failed: prev.failed.filter((c) => c.id !== item.id),
+   177→            queued: [
+   178→              ...prev.queued,
+   179→              {
+   180→                id: item.id,
+   181→                url: item.url,
+   182→                userId: item.userId,
+   183→                position: prev.queued.length + 1,
+   184→                enqueuedAt: new Date().toISOString(),
+   185→              },
+   186→            ],
+   187→          }
+   188→        : prev,
+   189→    );
+   190→  }
+   191→
+   192→  return (
+   193→    <div className="space-y-6">
+   194→      <ViewHeader
+   195→        title="Crawler Management"
+   196→        subtitle="Monitor & control crawl jobs"
+   197→        icon={Server}
+   198→        actions={
+   199→          <Button variant="outline" size="sm" onClick={() => load()}>
+   200→            <RefreshCw className="w-3.5 h-3.5 mr-1" /> Refresh
+   201→          </Button>
+   202→        }
+   203→      />
+   204→
+   205→      {/* Top stat cards */}
+   206→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+   207→        <StatCard label="Running" value={stats?.running ?? 0} icon={Activity} color="#10b981" />
+   208→        <StatCard label="Queued" value={stats?.queued ?? 0} icon={Clock} color="#f59e0b" />
+   209→        <StatCard label="Completed" value={stats?.completed ?? 0} icon={CheckCircle2} color="#14b8a6" />
+   210→        <StatCard label="Failed" value={stats?.failed ?? 0} icon={XCircle} color="#ef4444" />
+   211→      </div>
+   212→
+   213→      {/* Server metrics */}
+   214→      <Card className="p-5">
+   215→        <h3 className="font-semibold flex items-center gap-2 mb-4">
+   216→          <Cpu className="w-4 h-4 text-emerald-600" /> Server Metrics
+   217→        </h3>
+   218→        {loading || !metrics ? (
+   219→          <SkeletonRows rows={3} cols={3} />
+   220→        ) : (
+   221→          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+   222→            <MetricBar
+   223→              icon={Cpu}
+   224→              label="CPU Usage"
+   225→              value={metrics.cpu}
+   226→              max={100}
+   227→              suffix="%"
+   228→              current={`${metrics.cpu}%`}
+   229→            />
+   230→            <MetricBar
+   231→              icon={MemoryStick}
+   232→              label="Memory"
+   233→              value={metrics.memory}
+   234→              max={metrics.memoryLimit}
+   235→              suffix="MB"
+   236→              current={`${metrics.memory} / ${formatCompact(metrics.memoryLimit)} MB`}
+   237→            />
+   238→            <MetricBar
+   239→              icon={HardDrive}
+   240→              label="Disk"
+   241→              value={metrics.disk}
+   242→              max={metrics.diskLimit}
+   243→              suffix="GB"
+   244→              current={`${metrics.disk.toFixed(1)} / ${metrics.diskLimit} GB`}
+   245→            />
+   246→            <MetricBar
+   247→              icon={ListChecks}
+   248→              label="Queue Size"
+   249→              value={metrics.queueSize}
+   250→              max={Math.max(20, metrics.queueSize + 5)}
+   251→              suffix=" jobs"
+   252→              current={`${metrics.queueSize} queued`}
+   253→            />
+   254→            <MetricBar
+   255→              icon={Activity}
+   256→              label="Workers"
+   257→              value={metrics.workers}
+   258→              max={metrics.maxWorkers}
+   259→              suffix=""
+   260→              current={`${metrics.workers} / ${metrics.maxWorkers} active`}
+   261→            />
+   262→            <MetricBar
+   263→              icon={Database}
+   264→              label="DB Connections"
+   265→              value={metrics.dbConnections}
+   266→              max={metrics.maxDbConnections}
+   267→              suffix=""
+   268→              current={`${metrics.dbConnections} / ${metrics.maxDbConnections} conns`}
+   269→            />
+   270→            <div className="sm:col-span-2 lg:col-span-3">
+   271→              <div className="flex items-center justify-between gap-2 p-3 rounded-lg border bg-card">
+   272→                <div className="flex items-center gap-2">
+   273→                  <Network className="w-4 h-4 text-emerald-600" />
+   274→                  <span className="text-sm font-medium">Network throughput</span>
+   275→                </div>
+   276→                <Badge variant="outline" className="tabular-nums bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">
+   277→                  {metrics.network.toFixed(1)} Mbps
+   278→                </Badge>
+   279→              </div>
+   280→            </div>
+   281→          </div>
+   282→        )}
+   283→      </Card>
+   284→
+   285→      {/* Controls */}
+   286→      <Card className="p-5">
+   287→        <h3 className="font-semibold flex items-center gap-2 mb-4">
+   288→          <Server className="w-4 h-4 text-emerald-600" /> Crawler Controls
+   289→        </h3>
+   290→        <div className="flex flex-wrap items-center gap-2 mb-4">
+   291→          <Button
+   292→            size="sm"
+   293→            className={EMERALD_BTN}
+   294→            disabled={paused}
+   295→            onClick={() => { setPaused(false); toast.success("Crawlers resumed"); }}
+   296→          >
+   297→            <Play className="w-3.5 h-3.5 mr-1" /> Start / Resume all
+   298→          </Button>
+   299→          <Button
+   300→            size="sm"
+   301→            variant="outline"
+   302→            onClick={() => { setPaused(true); toast.info("All crawlers paused"); }}
+   303→          >
+   304→            <Pause className="w-3.5 h-3.5 mr-1" /> Pause all
+   305→          </Button>
+   306→          <Button
+   307→            size="sm"
+   308→            variant="outline"
+   309→            onClick={() => toast.info("Stop signal sent (demo)")}
+   310→          >
+   311→            <Square className="w-3.5 h-3.5 mr-1" /> Stop all
+   312→          </Button>
+   313→        </div>
+   314→        <Separator />
+   315→        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+   316→          <div className="grid gap-2">
+   317→            <div className="flex items-center justify-between">
+   318→              <Label className="text-sm">Max concurrent crawlers</Label>
+   319→              <Badge variant="outline" className="tabular-nums">{maxConcurrent}</Badge>
+   320→            </div>
+   321→            <Slider
+   322→              value={[maxConcurrent]}
+   323→              min={1}
+   324→              max={20}
+   325→              step={1}
+   326→              onValueChange={(arr) => setMaxConcurrent(arr[0] ?? maxConcurrent)}
+   327→            />
+   328→            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+   329→              <span>1</span>
+   330→              <span>20</span>
+   331→            </div>
+   332→          </div>
+   333→          <div className="grid gap-2">
+   334→            <div className="flex items-center justify-between">
+   335→              <Label className="text-sm">Crawl timeout</Label>
+   336→              <Badge variant="outline" className="tabular-nums">{crawlTimeout.toLocaleString()} ms</Badge>
+   337→            </div>
+   338→            <Slider
+   339→              value={[crawlTimeout]}
+   340→              min={1000}
+   341→              max={60000}
+   342→              step={500}
+   343→              onValueChange={(arr) => setCrawlTimeout(arr[0] ?? crawlTimeout)}
+   344→            />
+   345→            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+   346→              <span>1,000 ms</span>
+   347→              <span>60,000 ms</span>
+   348→            </div>
+   349→          </div>
+   350→        </div>
+   351→      </Card>
+   352→
+   353→      {/* Running crawlers table */}
+   354→      <Card className="p-5">
+   355→        <h3 className="font-semibold flex items-center gap-2 mb-3">
+   356→          <Activity className="w-4 h-4 text-emerald-600" /> Running Crawlers
+   357→          <Badge variant="secondary" className="ml-1">{running.length}</Badge>
+   358→          {paused && (
+   359→            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800">
+   360→              Paused
+   361→            </Badge>
+   362→          )}
+   363→        </h3>
+   364→        <div className={`-mx-2 px-2 ${SCROLLBAR_CLS} max-h-[50vh]`}>
+   365→          {loading ? (
+   366→            <SkeletonRows rows={3} cols={7} />
+   367→          ) : running.length === 0 ? (
+   368→            <EmptyState msg="No crawlers currently running" icon={Activity} />
+   369→          ) : (
+   370→            <Table>
+   371→              <TableHeader>
+   372→                <TableRow>
+   373→                  <TableHead>Crawl ID</TableHead>
+   374→                  <TableHead className="min-w-[200px]">URL</TableHead>
+   375→                  <TableHead>User</TableHead>
+   376→                  <TableHead className="min-w-[140px]">Progress</TableHead>
+   377→                  <TableHead className="text-right whitespace-nowrap">Pages</TableHead>
+   378→                  <TableHead className="text-right">CPU</TableHead>
+   379→                  <TableHead className="text-right">Memory</TableHead>
+   380→                  <TableHead className="whitespace-nowrap">Started</TableHead>
+   381→                  <TableHead className="text-right">Actions</TableHead>
+   382→                </TableRow>
+   383→              </TableHeader>
+   384→              <TableBody className="zebra">
+   385→                {running.map((c) => (
+   386→                  <TableRow key={c.id}>
+   387→                    <TableCell className="font-mono text-xs text-muted-foreground">
+   388→                      {truncate(c.id, 12)}
+   389→                    </TableCell>
+   390→                    <TableCell>
+   391→                      <div className="font-medium text-sm truncate max-w-[220px]" title={c.url}>
+   392→                        {c.url}
+   393→                      </div>
+   394→                    </TableCell>
+   395→                    <TableCell>
+   396→                      <div className="text-sm truncate max-w-[140px]">{c.userId}</div>
+   397→                    </TableCell>
+   398→                    <TableCell>
+   399→                      <div className="flex items-center gap-2">
+   400→                        <div className="relative flex-1 h-2 min-w-[80px] rounded-full bg-muted overflow-hidden">
+   401→                          <div
+   402→                            className="absolute top-0 left-0 h-full bg-emerald-500 transition-all"
+   403→                            style={{ width: `${c.progress}%` }}
+   404→                          />
+   405→                        </div>
+   406→                        <span className="tabular-nums text-xs w-9 text-right">{c.progress}%</span>
+   407→                      </div>
+   408→                      <div className="text-[10px] text-muted-foreground mt-1">
+   409→                        {c.pagesCrawled} / {formatCompact(c.totalPages)} pages
+   410→                      </div>
+   411→                    </TableCell>
+   412→                    <TableCell className="text-right tabular-nums text-xs">
+   413→                      {formatCompact(c.pagesCrawled)} / {formatCompact(c.totalPages)}
+   414→                    </TableCell>
+   415→                    <TableCell className="text-right tabular-nums text-xs">
+   416→                      <span className={c.cpu > 80 ? "text-red-600 dark:text-red-400" : ""}>
+   417→                        {c.cpu}%
+   418→                      </span>
+   419→                    </TableCell>
+   420→                    <TableCell className="text-right tabular-nums text-xs">{formatCompact(c.memory)} MB</TableCell>
+   421→                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+   422→                      {relativeTime(c.startedAt)}
+   423→                    </TableCell>
+   424→                    <TableCell className="text-right">
+   425→                      <div className="flex items-center justify-end gap-1">
+   426→                        <Button
+   427→                          variant="ghost"
+   428→                          size="sm"
+   429→                          className="h-7"
+   430→                          onClick={() => toast.info(`Viewing ${truncate(c.id, 12)} (demo)`)}
+   431→                        >
+   432→                          <Eye className="w-3.5 h-3.5" />
+   433→                        </Button>
+   434→                        <Button
+   435→                          variant="ghost"
+   436→                          size="sm"
+   437→                          className="h-7"
+   438→                          onClick={() => toast.info(`Paused ${truncate(c.id, 12)} (demo)`)}
+   439→                        >
+   440→                          <Pause className="w-3.5 h-3.5" />
+   441→                        </Button>
+   442→                        <Button
+   443→                          variant="ghost"
+   444→                          size="sm"
+   445→                          className="h-7 text-red-600 hover:text-red-700"
+   446→                          onClick={() => setCancelCrawl(c)}
+   447→                        >
+   448→                          <Square className="w-3.5 h-3.5" />
+   449→                        </Button>
+   450→                      </div>
+   451→                    </TableCell>
+   452→                  </TableRow>
+   453→                ))}
+   454→              </TableBody>
+   455→            </Table>
+   456→          )}
+   457→        </div>
+   458→      </Card>
+   459→
+   460→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+   461→        {/* Queued crawlers */}
+   462→        <Card className="p-5">
+   463→          <h3 className="font-semibold flex items-center gap-2 mb-3">
+   464→            <Clock className="w-4 h-4 text-emerald-600" /> Queued Crawlers
+   465→            <Badge variant="secondary" className="ml-1">{queued.length}</Badge>
+   466→          </h3>
+   467→          {loading ? (
+   468→            <SkeletonRows rows={2} cols={3} />
+   469→          ) : queued.length === 0 ? (
+   470→            <EmptyState msg="Queue is empty" icon={Clock} />
+   471→          ) : (
+   472→            <div className={`-mx-2 px-2 ${SCROLLBAR_CLS} max-h-[40vh] space-y-2`}>
+   473→              {queued.map((q) => (
+   474→                <div
+   475→                  key={q.id}
+   476→                  className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-card"
+   477→                >
+   478→                  <div className="flex items-center gap-3 min-w-0">
+   479→                    <div className="w-7 h-7 shrink-0 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 flex items-center justify-center text-xs font-bold">
+   480→                      {q.position}
+   481→                    </div>
+   482→                    <div className="min-w-0">
+   483→                      <div className="font-medium text-sm truncate max-w-[200px]" title={q.url}>
+   484→                        {q.url}
+   485→                      </div>
+   486→                      <div className="text-xs text-muted-foreground">
+   487→                        {q.userId} · {relativeTime(q.enqueuedAt)}
+   488→                      </div>
+   489→                    </div>
+   490→                  </div>
+   491→                  <Button
+   492→                    variant="ghost"
+   493→                    size="sm"
+   494→                    className="h-7 text-red-600 hover:text-red-700"
+   495→                    onClick={() => cancelQueued(q)}
+   496→                  >
+   497→                    Cancel
+   498→                  </Button>
+   499→                </div>
+   500→              ))}
+   501→            </div>
+   502→          )}
+   503→        </Card>
+   504→
+   505→        {/* Failed crawlers */}
+   506→        <Card className="p-5">
+   507→          <h3 className="font-semibold flex items-center gap-2 mb-3">
+   508→            <AlertTriangle className="w-4 h-4 text-red-600" /> Failed Crawlers
+   509→            <Badge variant="secondary" className="ml-1">{failed.length}</Badge>
+   510→          </h3>
+   511→          {loading ? (
+   512→            <SkeletonRows rows={2} cols={3} />
+   513→          ) : failed.length === 0 ? (
+   514→            <EmptyState msg="No failed crawlers" icon={CheckCircle2} />
+   515→          ) : (
+   516→            <div className={`-mx-2 px-2 ${SCROLLBAR_CLS} max-h-[40vh] space-y-2`}>
+   517→              {failed.map((f) => (
+   518→                <div
+   519→                  key={f.id}
+   520→                  className="p-3 rounded-lg border bg-red-50/40 dark:bg-red-950/20 border-red-200 dark:border-red-900/50"
+   521→                >
+   522→                  <div className="flex items-start justify-between gap-3">
+   523→                    <div className="min-w-0">
+   524→                      <div className="font-medium text-sm truncate max-w-[200px]" title={f.url}>
+   525→                        {f.url}
+   526→                      </div>
+   527→                      <div className="text-xs text-muted-foreground mt-0.5">
+   528→                        {f.userId} · {relativeTime(f.failedAt)}
+   529→                      </div>
+   530→                      <div className="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">
+   531→                        {f.error}
+   532→                      </div>
+   533→                    </div>
+   534→                    <Button
+   535→                      variant="ghost"
+   536→                      size="sm"
+   537→                      className="h-7 shrink-0"
+   538→                      onClick={() => retryFailed(f)}
+   539→                    >
+   540→                      <RotateCcw className="w-3.5 h-3.5 mr-1" /> Retry
+   541→                    </Button>
+   542→                  </div>
+   543→                </div>
+   544→              ))}
+   545→            </div>
+   546→          )}
+   547→        </Card>
+   548→      </div>
+   549→
+   550→      {/* Completed crawlers */}
+   551→      <Card className="p-5">
+   552→        <h3 className="font-semibold flex items-center gap-2 mb-3">
+   553→          <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Completed Crawlers
+   554→          <Badge variant="secondary" className="ml-1">{completed.length}</Badge>
+   555→        </h3>
+   556→        <div className={`-mx-2 px-2 ${SCROLLBAR_CLS} max-h-[50vh]`}>
+   557→          {loading ? (
+   558→            <SkeletonRows rows={3} cols={6} />
+   559→          ) : completed.length === 0 ? (
+   560→            <EmptyState msg="No completed crawls yet" icon={CheckCircle2} />
+   561→          ) : (
+   562→            <Table>
+   563→              <TableHeader>
+   564→                <TableRow>
+   565→                  <TableHead className="min-w-[200px]">URL</TableHead>
+   566→                  <TableHead>User</TableHead>
+   567→                  <TableHead className="text-right">Pages</TableHead>
+   568→                  <TableHead className="text-right">Score</TableHead>
+   569→                  <TableHead className="text-right">Duration</TableHead>
+   570→                  <TableHead className="whitespace-nowrap">Completed</TableHead>
+   571→                  <TableHead className="text-right">Actions</TableHead>
+   572→                </TableRow>
+   573→              </TableHeader>
+   574→              <TableBody className="zebra">
+   575→                {completed.map((c) => (
+   576→                  <TableRow key={c.id}>
+   577→                    <TableCell>
+   578→                      <div className="font-medium text-sm truncate max-w-[220px]" title={c.url}>
+   579→                        {c.url}
+   580→                      </div>
+   581→                    </TableCell>
+   582→                    <TableCell>
+   583→                      <div className="text-sm truncate max-w-[140px]">{c.userId}</div>
+   584→                    </TableCell>
+   585→                    <TableCell className="text-right tabular-nums text-xs">
+   586→                      {formatCompact(c.pagesCrawled)}
+   587→                    </TableCell>
+   588→                    <TableCell className="text-right">
+   589→                      <span
+   590→                        className="inline-flex items-center justify-center min-w-[2.5rem] px-2 py-0.5 rounded-md font-bold tabular-nums text-xs"
+   591→                        style={{ backgroundColor: `${scoreHex(c.score)}15`, color: scoreHex(c.score) }}
+   592→                      >
+   593→                        {c.score}
+   594→                      </span>
+   595→                    </TableCell>
+   596→                    <TableCell className="text-right tabular-nums text-xs text-muted-foreground">
+   597→                      {formatDuration(c.duration)}
+   598→                    </TableCell>
+   599→                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+   600→                      {relativeTime(c.completedAt)}
+   601→                    </TableCell>
+   602→                    <TableCell className="text-right">
+   603→                      <div className="flex items-center justify-end gap-1">
+   604→                        <Button
+   605→                          variant="ghost"
+   606→                          size="sm"
+   607→                          className="h-7"
+   608→                          onClick={() => toast.info(`Viewing ${truncate(c.id, 12)} (demo)`)}
+   609→                        >
+   610→                          <Eye className="w-3.5 h-3.5" />
+   611→                        </Button>
+   612→                        <Button
+   613→                          variant="ghost"
+   614→                          size="sm"
+   615→                          className="h-7"
+   616→                          onClick={() => toast.info(`Re-running ${truncate(c.id, 12)} (demo)`)}
+   617→                        >
+   618→                          <RotateCcw className="w-3.5 h-3.5" />
+   619→                        </Button>
+   620→                      </div>
+   621→                    </TableCell>
+   622→                  </TableRow>
+   623→                ))}
+   624→              </TableBody>
+   625→            </Table>
+   626→          )}
+   627→        </div>
+   628→      </Card>
+   629→
+   630→      <AlertDialog open={!!cancelCrawl} onOpenChange={(o) => { if (!o) setCancelCrawl(null); }}>
+   631→        <AlertDialogContent>
+   632→          <AlertDialogHeader>
+   633→            <AlertDialogTitle>Cancel crawl?</AlertDialogTitle>
+   634→            <AlertDialogDescription>
+   635→              This will immediately terminate the in-progress crawl for{" "}
+   636→              <span className="font-medium text-foreground">{cancelCrawl?.url}</span>.
+   637→              Pages crawled so far ({formatCompact(cancelCrawl?.pagesCrawled ?? 0)}) will be retained,
+   638→              but the audit will be marked as cancelled. This action cannot be undone.
+   639→            </AlertDialogDescription>
+   640→          </AlertDialogHeader>
+   641→          <AlertDialogFooter>
+   642→            <AlertDialogCancel disabled={cancelling}>Keep running</AlertDialogCancel>
+   643→            <AlertDialogAction
+   644→              onClick={(e) => {
+   645→                e.preventDefault();
+   646→                void cancelCrawlJob();
+   647→              }}
+   648→              disabled={cancelling}
+   649→              className="bg-red-600 hover:bg-red-700 text-white"
+   650→            >
+   651→              {cancelling && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+   652→              Cancel crawl
+   653→            </AlertDialogAction>
+   654→          </AlertDialogFooter>
+   655→        </AlertDialogContent>
+   656→      </AlertDialog>
+   657→    </div>
+   658→  );
+   659→}
+   660→
+   661→function MetricBar({
+   662→  icon: Icon,
+   663→  label,
+   664→  value,
+   665→  max,
+   666→  suffix,
+   667→  current,
+   668→}: {
+   669→  icon: React.ComponentType<{ className?: string }>;
+   670→  label: string;
+   671→  value: number;
+   672→  max: number;
+   673→  suffix: string;
+   674→  current: string;
+   675→}) {
+   676→  const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
+   677→  const barColor =
+   678→    pct >= 90
+   679→      ? "bg-red-500"
+   680→      : pct >= 70
+   681→        ? "bg-amber-500"
+   682→        : "bg-emerald-500";
+   683→  const textColor =
+   684→    pct >= 90
+   685→      ? "text-red-600 dark:text-red-400"
+   686→      : pct >= 70
+   687→        ? "text-amber-600 dark:text-amber-400"
+   688→        : "text-emerald-600 dark:text-emerald-400";
+   689→  return (
+   690→    <div className="p-3 rounded-lg border bg-card">
+   691→      <div className="flex items-center justify-between mb-2">
+   692→        <div className="flex items-center gap-2">
+   693→          <Icon className="w-4 h-4 text-muted-foreground" />
+   694→          <span className="text-sm font-medium">{label}</span>
+   695→        </div>
+   696→        <span className={`text-xs tabular-nums font-mono ${textColor}`}>
+   697→          {current}
+   698→        </span>
+   699→      </div>
+   700→      <div className="relative w-full h-2 rounded-full bg-muted overflow-hidden">
+   701→        <div
+   702→          className={`absolute top-0 left-0 h-full transition-all ${barColor}`}
+   703→          style={{ width: `${pct}%` }}
+   704→        />
+   705→      </div>
+   706→      {suffix && (
+   707→        <div className="text-[10px] text-muted-foreground mt-1">
+   708→          {pct.toFixed(0)}% of {max.toLocaleString()} {suffix}
+   709→        </div>
+   710→      )}
+   711→    </div>
+   712→  );
+   713→}
+   714→

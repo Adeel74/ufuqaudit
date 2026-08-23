@@ -1217,3 +1217,69 @@ Stage Summary:
 Phase 2 (Product Control) COMPLETE. Remaining:
 - Phase 3 — Growth: Blog CMS → SEO CMS → Email Marketing → Leads → Coupons → Affiliates → Announcements
 - Phase 4 — Enterprise: White Label → Client Portal → Advanced API → Webhooks → Competitor Management → Advanced Analytics → Feature Flags
+
+---
+Task ID: P3
+Agent: frontend-styling-expert (phase3-admin)
+Task: Build Phase 3 Super Admin sections (Blog, Campaigns, Leads, Coupons, Affiliates, Announcements)
+
+Work Log:
+- Read worklog.md (Phase 1 + Phase 2 entries), admin-helpers.tsx (shared formatters, SCROLLBAR_CLS, EMERALD_BTN, scoreHex, formatDateLong, relativeTime, formatCompact, formatCurrency, downloadCsv, initials), admin-view.tsx (14-tab shell + lazy-mount pattern), admin-crawler-section.tsx + admin-users-section.tsx + admin-plans-section.tsx + admin-ai-costs-section.tsx (Sheet, AlertDialog, Dialog, Recharts, Badge patterns).
+- Inspected 6 existing API routes (/api/admin/blog, campaigns, leads, coupons, affiliates, announcements) to lock down exact response shapes for strict TS typing (PostStatus, CampaignType/Status, LeadStatus, CouponType/Status, AffiliateStatus, AnnouncementType/Status/Audience, Channels).
+- Created `src/components/admin/sections/admin-blog-section.tsx` (AdminBlogSection): 5 StatCards (Total/Published/Drafts/Scheduled/Total Views), filter bar (search + status + category selects), 11-column zebra posts table (Title+slug, Author, Category colored badge, Tags mini-badges, Status badge, SEO score colored badge, Readability %, Words, Views, Published date, Actions), 2-col layout with table left + sticky sidebar right (Categories card with colored dots + Add button, Authors card with avatars, AI Blog Generator card with topic input + tone select + Generate outline/article buttons + Beta badge). Create Post dialog (title/author/category/tags/excerpt/content textarea with live word count). Delete AlertDialog. Publish/Unpublish toggle.
+- Created `src/components/admin/sections/admin-campaigns-section.tsx` (AdminCampaignsSection): 5 StatCards (Total/Sent/Scheduled+Drafts/Avg Open Rate/Avg CTR), 2-col layout (campaigns table left + templates sidebar right), 11-column zebra table (Campaign name+subject, Type badge newsletter=emerald/promotional=amber/onboarding=sky/announcement=violet, Audience, Status badge, Recipients, Opens count+%, Clicks count+%, Bounces %, Unsubs, Sent date, View/Duplicate/Delete actions). Templates sidebar with 10 templates (name, category badge, last used, Edit per item, Create New). Mini BarChart (open rate % + CTR per campaign, top 6 sent). Create Campaign dialog (name/type/subject/audience/template/schedule datetime).
+- Created `src/components/admin/sections/admin-leads-section.tsx` (AdminLeadsSection): 5 StatCards (Total/New/Contacted/Conversion Rate/Avg Score), filter bar (search website/email + status + source + campaign), 12-column zebra table (Website, Email, Score colored badge, Issues count, Critical red badge if >0, Source, Campaign, Status badge new=sky/contacted=amber/converted=emerald/lost=red, Created relative, Converted date, Plan badge, View/Contact/Mark Converted/Mark Lost actions). View → Sheet with lead details. Mark Converted → Dialog with plan select. Mark Lost → confirm AlertDialog. Conversion Funnel card with emerald gradient bars (Free Audit → Contacted → Converted) + overall conversion rate. Export CSV button (uses downloadCsv helper).
+- Created `src/components/admin/sections/admin-coupons-section.tsx` (AdminCouponsSection): 4 StatCards (Total/Active/Total Redemptions/Expired). Cards grid (NOT table) — each coupon card: Type badge (percentage=emerald/fixed=amber/free_trial=violet/free_months=sky), big value display (%/$/days/months), copyable code (monospace, click to copy via navigator.clipboard), description, usage progress bar (emerald→amber→red at 75%+/100%+), conditions (New users only + specific plan badges), expiration date with calendar icon, Edit + Disable/Enable + Delete buttons. Effective status auto-derives "expired" from expirationDate. Create Coupon dialog (code auto-uppercase, type select, value with contextual hint, description, expiration date, newUsersOnly switch, plan checkboxes). Empty state.
+- Created `src/components/admin/sections/admin-affiliates-section.tsx` (AdminAffiliatesSection): 5 StatCards (Total/Active/Total Clicks/Conversion Rate/Pending Payouts $), 2-col layout (affiliates table left + settings sidebar right). 13-column zebra table (Affiliate name+email, Status badge active=emerald/pending=amber/suspended=red, Referral Code monospace click-to-copy, Clicks, Signups, Paid Customers, Revenue, Commission Rate %, Commission Earned emerald, Pending amber, Paid Out muted, Joined relative, View/Approve/Suspend/Pay Out actions). View → Sheet with full breakdown. Suspend → confirm AlertDialog (toggle suspend↔reactivate). Pay Out → Dialog with amount input (max = pendingPayout) + optimistic payout deduction. Settings sidebar (default commission rate %, cookie duration days, min payout $, Save button → toast). Top Affiliates leaderboard (top 3 by commission earned with medal colors). Revenue vs Commission BarChart (Recharts, emerald revenue + violet commission per affiliate).
+- Created `src/components/admin/sections/admin-announcements-section.tsx` (AdminAnnouncementsSection): 4 StatCards (Total/Active/Scheduled/Total Views). Cards list (NOT table) — each card: type icon (info=sky Info/success=emerald CheckCircle2/warning=amber AlertTriangle/maintenance=orange Wrench), title bold, description truncated, type badge, audience badge, channel badges (Dashboard/Email/Popup with icons), status badge active=emerald/scheduled=amber/ended=slate, date range start→end, CTA label + href, views/clicks/CTR stats, Edit/End now/Delete actions. Live Preview card (right sidebar) showing how active announcement renders as a colored banner in user dashboard (uses TYPE_COLOR_HEX to style background, border, icon, title, CTA button). Create Announcement dialog (title, description, type select, audience select, 3 channel switches, start/end datetime, CTA label + href) + embedded live preview that updates as you edit. POSTs to /api/admin/announcements. End now → confirm AlertDialog with amber action button.
+- Modified `src/components/admin/admin-view.tsx`: added 5 icon imports (FileText, Mail, UserPlus, Ticket, Megaphone) + 6 section imports + 6 new TABS entries after Crawler (blog/campaigns/leads/coupons/affiliates/announcements) + 6 lazy-mounted TabsContent blocks (only render when tab active, matching the existing 14-tab pattern). All 14 existing tabs unchanged. Total tabs: 14 → 20.
+- Lint: PASS (eslint . exit 0, 0 problems). tsc --noEmit: 0 errors in src/components/admin (the only 4 remaining tsc errors are pre-existing in examples/websocket + skills/image-edit + skills/stock-analysis-skill — socket.io-client, image-edit, stock-analysis — unrelated to admin work).
+
+Stage Summary:
+- Files created (6):
+  • admin-blog-section.tsx (~16KB) — 5 StatCards, filter bar, 11-col zebra posts table, sticky sidebar (Categories, Authors, AI Blog Generator composer with tone select), Create Post dialog, Delete AlertDialog, Publish/Unpublish toggle.
+  • admin-campaigns-section.tsx (~17KB) — 5 StatCards, 11-col zebra campaigns table, templates sidebar (10 templates), Create Campaign dialog, performance BarChart (open rate + CTR top 6 sent).
+  • admin-leads-section.tsx (~18KB) — 5 StatCards, filter bar (search/status/source/campaign), 12-col zebra leads table, View Sheet, Convert Dialog (plan select), Lost AlertDialog, Export CSV, Conversion Funnel card with emerald gradient bars + overall conversion rate.
+  • admin-coupons-section.tsx (~17KB) — 4 StatCards, coupon cards grid (NOT table) with copyable codes + usage progress bars + condition badges, Create Coupon dialog (code auto-uppercase, type select, plan checkboxes, switches), effective status auto-derive from expirationDate.
+  • admin-affiliates-section.tsx (~20KB) — 5 StatCards, 13-col zebra affiliates table, View Sheet, Payout Dialog (with amount input maxed at pendingPayout), Suspend confirm AlertDialog, Settings sidebar (commission/cookie/min payout), Top Affiliates leaderboard (top 3 with medal colors), Revenue vs Commission BarChart (Recharts).
+  • admin-announcements-section.tsx (~20KB) — 4 StatCards, announcement cards list (NOT table) with type icon/badge + channel badges + audience badge + CTR stats, Live Preview card showing banner as user sees it, Create Announcement dialog with embedded live preview that updates on edit, End now AlertDialog.
+- Files modified (1): admin-view.tsx (TABS array 14→20, +6 lazy-mount TabsContent blocks + 5 icon imports + 6 section imports). Compact tab styling preserved (px-2.5 py-1.5 gap-1.5 text-xs whitespace-nowrap).
+- All sections use strict TS interfaces (no `any`), `"use client"`, sonner toasts, shadcn/ui, lucide-react icons, emerald/teal brand accent (NO indigo/blue primary), zebra-striped tables, dark mode `dark:` prefixes, `formatCompact`/`formatCurrency`/`relativeTime`/`formatDateLong`/`scoreHex`/`initials`/`downloadCsv` helpers, max-h-[40vh]/[60vh] overflow containers with SCROLLBAR_CLS, sticky sidebars on lg+.
+- Each section fires its API fetch on mount + on refreshKey change. Only the active tab's section renders (perf), matching the existing 14-tab pattern.
+- 20-tab Super Admin Portal: Dashboard | Users | Organizations | Plans | Subscriptions | Billing | API Keys | Audits | System | Audit Rules | Scoring | AI Models | AI Costs | Crawler | **Blog** | **Campaigns** | **Leads** | **Coupons** | **Affiliates** | **Announcements** (new tabs bolded).
+
+Phase 3 (Growth) COMPLETE. Remaining:
+- Phase 4 — Enterprise: White Label → Client Portal → Advanced API → Webhooks → Competitor Management → Advanced Analytics → Feature Flags
+
+---
+Task ID: P3 (Phase 3 — Growth)
+Agent: main (Z.ai Code) + frontend-styling-expert subagent
+Task: Build Phase 3 Super Admin sections (Blog CMS, Campaigns, Leads, Coupons, Affiliates, Announcements)
+
+Work Log:
+- Created 6 Phase 3 API routes:
+  - /api/admin/blog (GET 7 posts + categories + authors + POST create) — blog CMS data
+  - /api/admin/campaigns (GET 6 campaigns + 10 templates + stats) — email marketing
+  - /api/admin/leads (GET 10 leads with conversion tracking) — free audit lead gen
+  - /api/admin/coupons (GET 7 coupons with conditions + redemption tracking) — discount codes
+  - /api/admin/affiliates (GET 5 affiliates with commission/payout tracking + settings) — referral system
+  - /api/admin/announcements (GET 5 announcements + POST create) — platform banners
+- Delegated Phase 3 section build to frontend-styling-expert subagent:
+  - admin-blog-section.tsx — 5 StatCards, posts zebra table (11 cols), sidebar (categories/authors/AI Blog Generator composer), Create Post dialog
+  - admin-campaigns-section.tsx — 5 StatCards, campaigns zebra table, 10-template sidebar, performance BarChart, Create Campaign dialog
+  - admin-leads-section.tsx — 5 StatCards, filter bar, leads zebra table (12 cols), View Sheet, Convert Dialog, Conversion Funnel card with emerald gradient bars
+  - admin-coupons-section.tsx — 4 StatCards, coupon cards grid (NOT table), click-to-copy codes, usage progress bars, Create Coupon dialog with type-contextual value
+  - admin-affiliates-section.tsx — 5 StatCards, affiliates zebra table (13 cols), View Sheet, Payout Dialog, settings sidebar, Top Affiliates leaderboard, Revenue-vs-Commission BarChart
+  - admin-announcements-section.tsx — 4 StatCards, announcement cards (NOT table) with type/channel/CTR, Live Preview card, Create Announcement dialog with embedded live preview
+- Modified admin-view.tsx — added 6 new tabs (Blog, Campaigns, Leads, Coupons, Affiliates, Announcements). Total tab count: 14 → 20.
+
+Stage Summary:
+- Files created: 6 section components + 6 API routes = 12 new files
+- Files modified: admin-view.tsx (20 tabs now)
+- Lint: PASS. tsc: 0 errors in src.
+- 20-tab Super Admin Portal: Dashboard | Users | Organizations | Plans | Subscriptions | Billing | API Keys | Audits | System | Audit Rules | Scoring | AI Models | AI Costs | Crawler | Blog | Campaigns | Leads | Coupons | Affiliates | Announcements
+- All Phase 3 tabs verified via agent-browser + VLM (8-9/10 polish)
+- Dev server running on :3000, dev.log clean.
+
+Phase 3 (Growth) COMPLETE. Remaining:
+- Phase 4 — Enterprise: White Label → Client Portal → Advanced API → Webhooks → Competitor Management → Advanced Analytics → Feature Flags
