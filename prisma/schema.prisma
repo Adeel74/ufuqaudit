@@ -1,0 +1,160 @@
+// UfuqAudit — Prisma schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String?
+  role         String   @default("user") // user | admin
+  plan         String   @default("free") // free | starter | pro | agency
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  projects     Project[]
+  audits       Audit[]
+}
+
+model Project {
+  id           String   @id @default(cuid())
+  name         String
+  url          String
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  audits       Audit[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Audit {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url           String
+  status        String   @default("pending") // pending | running | done | failed
+  overallScore  Int      @default(0)
+  technicalScore Int     @default(0)
+  contentScore  Int      @default(0)
+  performanceScore Int   @default(0)
+  aeoScore      Int      @default(0)
+  geoScore      Int      @default(0)
+  securityScore Int      @default(0)
+  pagesCrawled  Int      @default(0)
+  issuesCount   Int      @default(0)
+  criticalCount Int      @default(0)
+  errorCount    Int      @default(0)
+  warningCount  Int      @default(0)
+  opportunityCount Int  @default(0)
+  summary       String?
+  createdAt     DateTime @default(now())
+
+  pages         AuditPage[]
+  issues        Issue[]
+
+  @@index([userId])
+  @@index([projectId])
+}
+
+model AuditPage {
+  id           String   @id @default(cuid())
+  auditId      String
+  audit        Audit    @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  url          String
+  statusCode    Int?
+  title         String?
+  metaDescription String?
+  h1            String?
+  wordCount     Int      @default(0)
+  loadTimeMs    Int      @default(0)
+  pageSizeKb    Int      @default(0)
+  indexable     Boolean  @default(true)
+  issuesCount   Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@index([auditId])
+}
+
+model Issue {
+  id           String   @id @default(cuid())
+  auditId      String
+  audit        Audit    @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  category     String   // technical | content | performance | aeo | geo | security | on_page | internal_links | schema
+  severity     String   // critical | error | warning | opportunity
+  issueType    String   // e.g. missing_meta_description
+  title         String
+  description   String
+  impact        String   @default("medium") // high | medium | low
+  recommendation String?
+  pageUrl       String?
+  status        String   @default("open") // open | fixed | ignored
+  createdAt     DateTime @default(now())
+
+  @@index([auditId])
+  @@index([category])
+  @@index([severity])
+}
+
+model Recommendation {
+  id           String   @id @default(cuid())
+  auditId      String
+  issueType    String
+  pageUrl      String?
+  context      String
+  suggestion   String
+  model        String?
+  createdAt    DateTime @default(now())
+}
+
+model Plan {
+  id           String   @id
+  name         String
+  priceMonthly Int
+  priceYearly  Int
+  urlLimit     Int
+  projectLimit Int
+  features     String   // JSON string
+  popular      Boolean  @default(false)
+}
+
+model Subscription {
+  id           String   @id @default(cuid())
+  userId       String
+  planId       String
+  status        String   @default("active")
+  currentPeriodEnd DateTime?
+  createdAt     DateTime @default(now())
+}
+
+model Integration {
+  id           String   @id @default(cuid())
+  userId       String
+  provider     String   // gsc | ga4 | search_console
+  status        String   @default("disconnected")
+  metadata     String?
+  createdAt     DateTime @default(now())
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  userId       String?
+  action       String
+  entity       String
+  entityId     String?
+  details      String?
+  createdAt    DateTime @default(now())
+}
+
+model SystemSetting {
+  id           String   @id @default(cuid())
+  key          String   @unique
+  value        String
+  updatedAt    DateTime @updatedAt
+}
