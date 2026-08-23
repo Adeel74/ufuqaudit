@@ -199,13 +199,13 @@ export function BillingView() {
                   )}
                   variant={t.popular ? "default" : "outline"}
                   disabled={isCurrent}
-                  onClick={() => toast.success(`${isUpgrade ? "Upgrade" : "Downgrade"} to ${t.name} requested`)}
+                  onClick={() => toast.success(`${isUpgrade ? "Upgrade" : "Switch"} to ${t.name} requested`)}
                 >
                   {isCurrent
                     ? "Current plan"
                     : isUpgrade
                       ? "Upgrade"
-                      : "Downgrade"}
+                      : "Switch plan"}
                   {!isCurrent && isUpgrade && <ArrowDown className="w-3.5 h-3.5 ml-1 rotate-180" />}
                 </Button>
 

@@ -218,8 +218,8 @@ function ProfileTab({
         <Input id="su-name" value={nameValue} onChange={(e) => setNameValue(e.target.value)} />
       </FieldRow>
 
-      <FieldRow label="Email" desc="Contact your admin to change your email address." htmlFor="su-email">
-        <Input id="su-email" value={email} readOnly disabled className="opacity-70" />
+      <FieldRow label="Email" desc="Your email is used for login and audit notifications." htmlFor="su-email">
+        <Input id="su-email" value={email} readOnly className="opacity-70" />
       </FieldRow>
 
       <FieldRow label="Bio" htmlFor="su-bio">

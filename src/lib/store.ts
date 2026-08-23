@@ -22,6 +22,7 @@ export type ViewKey =
   | "tools"
   | "keywords"
   | "backlinks"
+  | "content"
   | "reports"
   | "admin"
   | "settings"
@@ -81,6 +82,7 @@ export const ADMIN_VIEWS: { key: ViewKey; label: string; icon: string }[] = [
   { key: "tools", label: "SEO Tools", icon: "Wrench" },
   { key: "keywords", label: "Keywords", icon: "Search" },
   { key: "backlinks", label: "Backlinks", icon: "Link2" },
+  { key: "content", label: "Content", icon: "PenLine" },
   { key: "reports", label: "Reports", icon: "FileBarChart" },
   { key: "integrations", label: "Integrations", icon: "Plug" },
   { key: "billing", label: "Billing", icon: "CreditCard" },

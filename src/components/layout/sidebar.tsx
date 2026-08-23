@@ -6,7 +6,7 @@ import {
   LayoutDashboard, ListChecks, FileText, MessageSquare, Brain, Gauge,
   Shield, Sparkles, FileBarChart, Plug, CreditCard, Settings as SettingsIcon,
   ShieldCheck, Home, X, GaugeCircle, ChevronRight, History, Swords, Bot, Wrench,
-  Search, Link2,
+  Search, Link2, PenLine,
 } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { useAppStore as useStore } from "@/lib/store";
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard, ListChecks, FileText, MessageSquare, Brain, Gauge,
   Shield, Sparkles, FileBarChart, Plug, CreditCard, Settings: SettingsIcon,
-  ShieldCheck, Home, History, Swords, Bot, Wrench, Search, Link2,
+  ShieldCheck, Home, History, Swords, Bot, Wrench, Search, Link2, PenLine,
 };
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
@@ -42,9 +42,9 @@ function SidebarContent({
   user: any;
 }) {
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
+    <div className="flex flex-col h-full">
       {/* Brand */}
-      <div className="px-5 py-4 border-b">
+      <div className="px-5 py-4 border-b shrink-0">
         <button onClick={() => setView("landing")} className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white">
             <GaugeCircle className="w-5 h-5" />
@@ -53,14 +53,14 @@ function SidebarContent({
         </button>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-3 space-y-0.5">
+      {/* Scrollable nav */}
+      <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30">
         <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Audit</div>
         {ADMIN_VIEWS.filter((v) => !["admin", "settings", "billing", "integrations"].includes(v.key)).map((v) => {
           const Icon = ICONS[v.icon] || FileText;
           const active = view === v.key;
           // history, competitors, ai-chat, tools have their own data, so always enabled
-          const alwaysEnabled = ["admin", "history", "competitors", "ai-chat", "tools", "keywords", "backlinks"].includes(v.key);
+          const alwaysEnabled = ["admin", "history", "competitors", "ai-chat", "tools", "keywords", "backlinks", "content"].includes(v.key);
           const disabled = !currentAudit && !alwaysEnabled;
           return (
             <button
@@ -123,7 +123,7 @@ function SidebarContent({
       </nav>
 
       {/* Plan card */}
-      <div className="border-t p-3">
+      <div className="border-t p-3 shrink-0">
         <div className="rounded-lg bg-gradient-to-br from-emerald-500/10 to-teal-600/10 border border-emerald-200/50 p-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-emerald-700">{user?.plan?.toUpperCase() || "FREE"} PLAN</span>

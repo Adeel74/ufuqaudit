@@ -4,7 +4,7 @@ import { useAppStore, ADMIN_VIEWS } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Menu, Search, Bell, Sun, Moon, Home, Plus, ChevronDown,
+  Menu, Search, Sun, Moon, Home, Plus, ChevronDown,
 } from "lucide-react";
 import * as React from "react";
 import { useTheme } from "next-themes";
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
+import { NotificationsPopover } from "@/components/layout/notifications-popover";
 
 export function TopBar({ onMenu }: { onMenu: () => void }) {
   const { view, setView, user, currentAudit, logout } = useAppStore();
@@ -93,10 +94,7 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
             <Sun className="w-4 h-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
             <Moon className="absolute w-4 h-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-9 w-9 relative" onClick={() => toast.info("No new notifications")}>
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />
-          </Button>
+          <NotificationsPopover />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-9 px-2 gap-2">

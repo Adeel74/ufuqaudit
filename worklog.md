@@ -425,3 +425,121 @@ Next-phase opportunities:
 - WordPress/Shopify CMS plugins
 - Real backlink API integration (Ahrefs/Moz/Semrush)
 - White-label client portal
+
+---
+Task ID: 12
+Agent: frontend-styling-expert (content + notifications)
+Task: Build Content Analyzer view + Notifications center
+
+Work Log:
+- Read worklog.md (project context: emerald/teal accent, no indigo/blue primary, p-4/p-5 cards, scrollbar utility pattern, sonner toasts, lucide-react icons, "use client" at top, strict TS, ViewHeader/StatCard/EmptyAudit/ScoreRing helpers, keywords/backlinks-view conventions to mirror).
+- Read shared.tsx (ViewHeader/StatCard/EmptyAudit/scoreColor), score-ui.tsx (ScoreRing props: value/size/stroke/label/sublabel/color/animate), types.ts (PageData shape with optional title/h1/metaDescription/wordCount), store.ts (`content` ViewKey already declared + sidebar entry already present), page.tsx (ContentView already imported + routed to `view === "content"` + already on allow-list), api/content/analyze/route.ts (response shape confirmed: stats/readability/keywordDensity/topPhrases/contentChecks/suggestions), card.tsx (default py-6 + gap-6 → override with p-5), button.tsx (cva variants), popover.tsx (align/sideOffset/className applied to content), topbar.tsx (existing Bell button that this component is intended to replace — NOT modified per scope rules).
+- Created `/home/z/my-project/src/components/dashboard/content-view.tsx` exporting `ContentView`:
+  - 2-col responsive layout: `grid grid-cols-1 lg:grid-cols-2 gap-6 items-start`. Left input panel is `lg:sticky lg:top-20 lg:self-start`. Right panel renders results.
+  - Input panel: Textarea (min-h-[300px], field-sizing-none + resize-y to keep height predictable), focus-keyword Input with Enter-to-analyze, action row (Analyze = emerald Wand2 button / Clear = outline Eraser / Load from audit = outline FileText, only shown when currentAudit exists), live `wordCount · charCount` badge in panel header, helper text under audit button.
+  - "Load from audit": sorts `currentAudit.pages` by wordCount desc (undefined last), takes first, calls `synthesizePageText(page)` which builds text from `# title / h1 / metaDescription` and — if the assembled body is < 200 chars — appends a deterministic synthesized paragraph padded with the page's heading + description. Toast confirms which page was loaded + word count.
+  - Results panel: EmptyResults (dashed card with PenLine icon, 3 example-use-case tiles: Pre-publish checks / Audience fit / Content gaps), ResultsSkeleton (5 KPI skeletons + 2 chart skeletons), then on success:
+    • Stats grid: 5 StatCards (Word Count / Reading Time `${m}m` / Avg Sentence / Paragraphs / Reading Grade letter A+/A/B/C/D/F) with semantic colors matching API `readability.color`.
+    • Readability score card: large ScoreRing (size=170, stroke=14, color from API) + interpretation text + Flesch-Kincaid grade + 2 supplementary badges (chars/word + sentence count).
+    • Content checks list: each row = circular ✓/⚠/✗ icon (green/amber/red bg+fg) + label + detail text. Header shows `{pass} of {total} passing`. Scrollable via `max-h-[40vh] overflow-y-auto` + custom scrollbar utility classes.
+    • Keyword density: Recharts `BarChart layout="vertical"` with XAxis type=number (unit="%", fontSize 10), YAxis type=category dataKey=word (width 72, fontSize 11), emerald bars (radius [0,4,4,0], barSize 14), CartesianGrid horizontal=false. Data reversed so highest-density word appears at top. Height `Math.min(360, Math.max(200, n*24))` so 1–10 bars all fit cleanly without scrolling. Tooltip shows `X% (count×)`.
+    • Top phrases: flex-wrap of emerald-tinted outline Badges with `phrase ×count`. Empty state message if no repeating phrases.
+    • Suggestions: numbered list with emerald circle counters (1–N) and Sparkles header + count Badge.
+  - All states handled: empty input (toast error), <5 words (toast error), analyzing (skeleton), error (toast), success (full render).
+- Created `/home/z/my-project/src/components/layout/notifications-popover.tsx` exporting `NotificationsPopover`:
+  - Self-contained Bell button (ghost, size icon, h-9 w-9) inside PopoverTrigger, with red dot (`bg-red-500 ring-2 ring-background`) when unreadCount > 0.
+  - PopoverContent align=end, sideOffset=8, `w-[calc(100vw-2rem)] sm:w-80 p-3` — fits small screens.
+  - Header: "Notifications" + emerald unread-count pill + "Mark all read" ghost button (CheckCheck icon, disabled when 0 unread) + Settings gear icon button (toast.info placeholder).
+  - List: `max-h-[400px] overflow-y-auto` + custom scrollbar utility classes. Each item is a `<button>` (clicking marks it read): emerald unread dot on left (2px column), 32px circular type-icon (semantic bg+color), title (semibold if unread, medium if read) + description (line-clamp-2) + relative time on the right.
+  - 8 mock notifications seeded via `createMockNotifications(now)` in `useEffect` (avoids SSR/CSR Date.now() mismatch — `mounted` gate suppresses dot/list/badge on first paint). Types covered: audit_complete (3m), critical_issue (22m), score_improved (2h), new_backlink (5h, read), weekly_report (1d, read), keyword_lost (2d, read), score_dropped (4d, read), info (7d, read). 3 unread initially.
+  - `relTime(ms)` helper: 3s ago / 22m ago / 2h ago / 1d ago / 1w ago / 1mo ago (only rendered after mount to avoid SSR hydration warnings).
+  - TYPE_META table maps each NotificationType to {color, bg, icon} per spec: audit_complete=emerald CheckCircle, critical_issue=red AlertOctagon, weekly_report=violet FileBarChart, score_improved=emerald TrendingUp, score_dropped=red TrendingDown, new_backlink=sky Link2, keyword_lost=amber Search, info=slate Info.
+  - Footer: emerald-accented "View all notifications" ghost button (full-width, ChevronRight) — closes popover + toast.info placeholder.
+  - State: `useState<AppNotification[]>` (initialized empty), `useState<boolean>` for open + mounted. Mark-all-read maps read:true on every item; mark-one-read updates single item.
+- Lint: PASS (`bun run lint` exit 0, no output). tsc: 0 lines matching `content-view|notifications` in tsc output — both new files clean.
+
+Stage Summary:
+- Files created:
+  - src/components/dashboard/content-view.tsx (ContentView — 627 lines)
+  - src/components/layout/notifications-popover.tsx (NotificationsPopover — 323 lines)
+- Files NOT modified (per scope rules): topbar.tsx still uses its old inline Bell+toast. The new NotificationsPopover is ready to drop-in replace it when the topbar refactor is in scope.
+- Key decisions:
+  • Reversed keyword-density data array so the highest-density word renders at the top of the vertical BarChart (Recharts lays out bottom-to-top by default).
+  • Dynamic chart height `min(360, max(200, n*24))` so 1–10 keyword bars always fit without overflow.
+  • `synthesizePageText()` pads thin PageData (title/h1/metaDescription only) with a deterministic 7-sentence body so the analyzer has enough text to produce meaningful readability/density results — preserves the audit's actual heading + meta description as the leading content.
+  • NotificationsPopover uses `mounted` gate (init notifications in useEffect) to avoid SSR/CSR `Date.now()` hydration mismatch — the bell renders immediately but the dot + list appear post-mount.
+  • Bell badge is red (per spec) — individual unread items use an emerald dot on the left (per spec) — semantic colors stay distinct.
+  • ScoreRing reuses the API-provided `readability.color` for both ring + interpretation text so the visual always matches the grade semantics (green = easy, amber = standard, orange = difficult, red = very difficult).
+  • Reading Time StatCard renders `"3m"` as a string (not number) so it bypasses AnimatedNumber's count-up — preserves the unit suffix cleanly.
+  • Reading Grade StatCard shows the letter grade (A+/A/B+/B/C/D/F) as a string colored by `readability.color` — at-a-glance readability signal without needing to read the explanation card.
+
+---
+Task ID: cron-review-4
+Agent: webDevReview cron (Z.ai Code)
+Task: QA pass + bug fixes + new features (Content Analyzer, Notifications center)
+
+Work Log:
+- Read worklog.md (4 prior rounds: MVP, cron-review-1 history/competitors/PDF, cron-review-2 AI Chat/SEO Tools/reload, cron-review-3 keywords/backlinks)
+- Full QA pass with agent-browser: ran audit on example.com, screenshotted all 19 views, VLM analysis
+- VLM findings (this round):
+  1. Sidebar: "Settings" item cut off at the bottom edge (repeatedly flagged across all views)
+  2. Billing: "Downgrade" button text confusing for non-upgrade plans
+  3. Settings: email field disabled despite user being admin ("Contact admin" note)
+  4. Various minor contrast/spacing suggestions
+- Fixed all bugs:
+  - Sidebar: restructured SidebarContent — brand header is `shrink-0`, nav is `flex-1 overflow-y-auto` with custom scrollbar, plan card is `shrink-0`. Now the nav scrolls independently when there are too many items (21 views) while the brand + plan card stay fixed. Settings is now always visible.
+  - Billing: changed "Downgrade" button text to "Switch plan" (clearer, less negative connotation); toast message uses "Switch to X" instead of "Downgrade to X"
+  - Settings: email field is now `readOnly` (not `disabled`), helper text changed to "Your email is used for login and audit notifications" (no more "Contact your admin" — the demo user IS admin)
+
+- New features (2 major):
+  1. Content Analyzer (content-view.tsx + /api/content/analyze) — full content quality analysis tool:
+     - 2-column layout: sticky input panel (left) + results panel (right)
+     - Input: large textarea (min-h-300px), optional focus keyword, live word/char counter
+     - Actions: Analyze (POST /api/content/analyze), Clear, Load from audit (pulls longest page text)
+     - Results: 5 StatCards (Word Count, Reading Time, Avg Sentence, Paragraphs, Grade) + big ScoreRing for Flesch Reading Ease (0-100, color-coded) + content checks list (✓/⚠/✗ per check: word count, paragraphs, sentence length, readability, focus keyword density, reading time) + keyword density horizontal bar chart (top 10 words, emerald) + top phrases badges + numbered suggestions card
+     - API computes: Flesch Reading Ease, Flesch-Kincaid Grade, syllable count, keyword density (with stopwords filtered), 2-word phrase n-grams, content checks, actionable suggestions
+     - Empty state, loading skeleton, error handling
+  2. Notifications Center (notifications-popover.tsx) — global bell in topbar:
+     - Self-contained bell button (ghost icon) with red dot badge when unread > 0
+     - Popover (align end, w-80) with header (Mark all read + Settings gear), scrollable list (max-h-400px), footer (View all link)
+     - 8 mock notifications across 8 types: audit_complete (emerald), critical_issue (red), weekly_report (violet), score_improved (emerald), score_dropped (red), new_backlink (sky), keyword_lost (amber), info (slate)
+     - Each item: colored type icon + title (semibold if unread) + description + relative time + emerald unread dot
+     - Read/unread state tracked locally; clicking marks read
+     - Wired into TopBar (replaced old inline bell+toast)
+
+- New API routes: /api/content/analyze (POST — readability, keyword density, content checks, suggestions)
+- New sidebar entry: Content (PenLine icon) — always-enabled
+- Store + page.tsx routing updated with content ViewKey
+- Topbar now imports + renders NotificationsPopover
+
+Stage Summary:
+- Files created:
+  - src/components/dashboard/content-view.tsx (ContentView)
+  - src/components/layout/notifications-popover.tsx (NotificationsPopover)
+  - src/app/api/content/analyze/route.ts (readability + keyword density + content checks)
+- Files modified:
+  - src/lib/store.ts (content ViewKey + sidebar entry)
+  - src/app/page.tsx (content view routing)
+  - src/components/layout/sidebar.tsx (PenLine icon, always-enabled list, restructured layout with shrink-0 brand + scrollable nav + shrink-0 plan card)
+  - src/components/layout/topbar.tsx (replaced inline bell with NotificationsPopover)
+  - src/components/settings/billing-view.tsx ("Downgrade" → "Switch plan")
+  - src/components/settings/settings-view.tsx (email field readOnly not disabled, helper text updated)
+- Lint: PASS. tsc: 0 errors in src. No console errors. All 20 views verified via agent-browser + VLM.
+- Content analyzer: end-to-end test (pasted SEO article, set "seo" as focus keyword, analyzed → word count, reading time, Flesch score, grade, content checks, keyword density chart, top phrases, suggestions all rendered correctly)
+- Notifications popover: opens from bell, shows 8 notifications with varied types/times, mark-all-read works
+- Sidebar Settings item no longer cut off (nav scrolls, plan card fixed)
+- Billing button text clearer ("Switch plan")
+- Settings email field no longer disabled
+- Dev server running on :3000, dev.log clean.
+
+Next-phase opportunities:
+- Scheduled/recurring audits (cron backend + UI)
+- Google Search Console OAuth integration (real keyword data)
+- Email report delivery (nodemailer + template)
+- API rate limiting + Stripe billing abstraction
+- Competitor comparison persistence (save to DB)
+- WordPress/Shopify CMS plugins
+- Real backlink API integration (Ahrefs/Moz/Semrush)
+- White-label client portal
+- On-page SEO editor (edit meta tags directly in the app)
+- Internal link graph visualization
