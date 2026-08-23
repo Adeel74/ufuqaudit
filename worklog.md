@@ -687,3 +687,61 @@ Next-phase opportunities:
 - WordPress/Shopify CMS plugins
 - On-page SEO editor
 - Real backlink API integration
+
+---
+Task ID: cron-review-6
+Agent: webDevReview cron (Z.ai Code)
+Task: QA pass + bug fixes + new features (Client Portal public page, Command Palette)
+
+Work Log:
+- Read worklog.md (6 prior rounds: MVP, cron-review-1 through cron-review-5)
+- Full QA pass with agent-browser: screenshotted landing sections (hero, engines, how-it-works, AEO/GEO, pricing, CTA), onboarding wizard (all 4 steps + result), dashboard
+- VLM findings (this round):
+  1. Landing page: "4 AI engines covered" confused with "Six audit engines" — users think the 4 contradicts the 6
+  2. Onboarding wizard: no bugs, all 4 steps work end-to-end (polish 8-9/10)
+  3. Landing page sections: all clean (8-9/10 polish)
+- Fixed: Landing page stat label "AI engines covered" → "AI answer engines" (clarifies: 4 AI answer engines like ChatGPT/Claude/Perplexity/Google vs 6 audit engines like Technical/Content/Performance/AEO/GEO/Security)
+
+- New features (2 major + 1 enhancement):
+  1. Client Portal Public Page (/portal/[token] route) — real Next.js route page that clients see when they open a shared link:
+     - Full branded audit report: agency header with brand color, score ring, category scores grid, issue summary (critical/error/warning/opportunity), top issues with fix recommendations, AI action plan, contact CTA
+     - All elements use the agency's selected brand color (from the PortalLink branding)
+     - Error states: "Link not found" (404), "Link expired" (410), loading spinner
+     - API: GET /api/portal/[token] fetches the portal link + tries to find the real audit from DB (falls back to mock data if not found)
+     - Client Portal "View" action now opens /portal/<token> in a new tab (was just a toast before)
+  2. Command Palette (Cmd+K / Ctrl+K) — global search + quick navigation:
+     - Opens with Cmd+K (Mac) or Ctrl+K (Windows) from ANY view (landing, app shell, pricing)
+     - Searchable list of 26 actions (all views + "Run New Audit")
+     - Fuzzy search across label, hint, and keywords (e.g. "keyword" matches Keywords + Content Analyzer)
+     - Keyboard navigation: ↑↓ to navigate, Enter to select, ESC to close
+     - Active item highlighted with emerald + CornerDownLeft icon
+     - Footer with keyboard hints
+     - ⌘K button added to topbar (visible on desktop) for discoverability
+     - Works on landing page too (CommandPalette rendered globally)
+  3. Client Portal "View" action wired to open real /portal/<token> page (was just a toast before)
+
+- New files:
+  - src/app/portal/[token]/page.tsx (client-facing branded audit report)
+  - src/app/api/portal/[token]/route.ts (GET single portal link + audit data)
+  - src/components/layout/command-palette.tsx (global Cmd+K search + navigation)
+- Files modified:
+  - src/components/landing/landing-view.tsx ("AI engines covered" → "AI answer engines")
+  - src/app/page.tsx (CommandPalette rendered on all views: landing, audit-progress, pricing, app shell)
+  - src/components/layout/topbar.tsx (⌘K button added)
+  - src/components/dashboard/client-portal-view.tsx (View action opens /portal/<token> in new tab)
+
+Stage Summary:
+- Lint: PASS. tsc: 0 errors in src. No console errors.
+- Client portal page: renders branded audit report with score ring, category scores, issues, action plan, contact CTA. Error states work (404/410). VLM rated 9/10 polish.
+- Command palette: Cmd+K opens from any view, search filters 26 actions, keyboard navigation works, clicking navigates to the view. Verified: searched "keyword" → clicked Keywords → navigated to Keyword Rank Tracker.
+- Landing page stat label clarified
+- Dev server running on :3000, dev.log clean.
+
+Next-phase opportunities:
+- Google Search Console OAuth integration (real keyword data)
+- Email report delivery (nodemailer + template)
+- API rate limiting + Stripe billing abstraction
+- Backend cron job to execute enabled scheduled audits
+- Real backlink API integration (Ahrefs/Moz/Semrush)
+- WordPress/Shopify CMS plugins
+- On-page SEO editor

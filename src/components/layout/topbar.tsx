@@ -90,6 +90,10 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
 
         {/* Right side */}
         <div className="flex items-center gap-1.5">
+          <Button variant="ghost" size="sm" className="hidden md:flex items-center gap-2 h-9 px-2 text-muted-foreground" onClick={() => { const e = new KeyboardEvent("keydown", { key: "k", metaKey: true, ctrlKey: navigator.platform.includes("Win") }); window.dispatchEvent(e); }}>
+            <Search className="w-3.5 h-3.5" />
+            <kbd className="px-1 py-0.5 rounded border bg-muted text-[9px] font-mono">⌘K</kbd>
+          </Button>
           <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Toggle theme">
             <Sun className="w-4 h-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
             <Moon className="absolute w-4 h-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />

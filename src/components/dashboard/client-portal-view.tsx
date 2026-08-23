@@ -252,7 +252,9 @@ export function ClientPortalView() {
   };
 
   const onView = (link: PortalLink) => {
-    toast.info("Opening portal…", {
+    const full = buildFullUrl(link.token);
+    window.open(full, "_blank", "noopener,noreferrer");
+    toast.success("Opening client portal in new tab", {
       description: `${link.clientName} · ${truncateUrl(link.auditUrl, 32)}`,
     });
   };

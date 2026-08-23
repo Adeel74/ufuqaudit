@@ -32,6 +32,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/topbar";
 import { Footer } from "@/components/layout/footer";
 import { PrintReportPortal } from "@/components/reports/print-portal";
+import { CommandPalette } from "@/components/layout/command-palette";
 import {
   LayoutDashboard, ListChecks, FileText, MessageSquare, Brain, Gauge,
   Shield, Sparkles, FileBarChart, Plug, CreditCard, Settings as SettingsIcon,
@@ -56,6 +57,7 @@ export default function Home() {
       <div className="min-h-screen flex flex-col bg-background">
         <LandingView />
         <Footer />
+        <CommandPalette />
       </div>
     );
   }
@@ -64,6 +66,7 @@ export default function Home() {
       <div className="min-h-screen flex flex-col bg-background">
         <AuditProgressView />
         <Footer />
+        <CommandPalette />
       </div>
     );
   }
@@ -72,6 +75,7 @@ export default function Home() {
       <div className="min-h-screen flex flex-col bg-background">
         <PricingView />
         <Footer />
+        <CommandPalette />
       </div>
     );
   }
@@ -135,6 +139,7 @@ export default function Home() {
         </main>
       </div>
       <PrintReportPortal />
+      <CommandPalette />
     </div>
   );
 }

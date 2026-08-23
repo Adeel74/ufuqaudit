@@ -120,7 +120,7 @@ export function LandingView() {
             {[
               { n: "216+", l: "Audit checks" },
               { n: "6", l: "Audit engines" },
-              { n: "4", l: "AI engines covered" },
+              { n: "4", l: "AI answer engines" },
               { n: "10s", l: "Avg audit time" },
             ].map((s) => (
               <div key={s.l}>
