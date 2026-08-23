@@ -103,7 +103,7 @@ const INTEGRATIONS: IntegrationDef[] = [
   },
 ];
 
-const INITIAL_CONNECTED: ProviderId[] = ["psi", "slack"];
+const INITIAL_CONNECTED: ProviderId[] = ["gsc", "psi", "slack"];
 
 export function IntegrationsView() {
   const [connected, setConnected] = React.useState<Set<ProviderId>>(new Set(INITIAL_CONNECTED));

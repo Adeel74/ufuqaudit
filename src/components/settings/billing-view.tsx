@@ -122,10 +122,10 @@ export function BillingView() {
                 })}
               </span>
             </p>
+            <Button className={cn(EMERALD_BTN, "mt-4")} onClick={scrollToPlans}>
+              <Zap className="w-3.5 h-3.5 mr-1" /> Change plan
+            </Button>
           </div>
-          <Button className={EMERALD_BTN} onClick={scrollToPlans}>
-            <Zap className="w-3.5 h-3.5 mr-1" /> Change plan
-          </Button>
         </div>
 
         <div className="mt-6 grid sm:grid-cols-3 gap-4">

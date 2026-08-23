@@ -937,3 +937,113 @@ Next-phase opportunities:
 - On-page SEO editor
 - Real API proxy for try-it panel
 - Pagination for activity feed
+
+---
+Task ID: 17
+Agent: frontend-styling-expert (page-editor + crawl-settings)
+Task: Build On-page SEO editor + Crawl settings views
+
+Work Log:
+- Read worklog.md (esp. Task 15/16 patterns: EMERALD_BTN + SCROLLBAR_CLS constants, Switch/Separator/Card/Dialog conventions, dark mode `dark:` prefixes, sonner toasts, lucide icons, "use client", strict TS), shared.tsx (ViewHeader/useAudit/EmptyAudit/StatCard), types.ts (PageData with url/title/metaDescription/h1/wordCount/indexable/hasCanonical/hasOg/hasTwitter/hasViewport/hasLang + CATEGORY_META weights), store.ts (ViewKey already includes page-editor + crawl-settings, setView, currentAudit), page.tsx (case "page-editor" → PageEditorView, case "crawl-settings" → CrawlSettingsView already wired + allowed-empty list), /api/ai/recommend/route.ts (POST {issueType, issueTitle, pageUrl, pageTitle, brandName} → {suggestion, model}), pages-view.tsx (truncateUrl pattern), scheduled-view.tsx + email-reports-view.tsx (Switch/Slider/Dialog/Toast patterns), slider.tsx (radix SliderPrimitive onValueChange returns number[]).
+- Created `/home/z/my-project/src/components/dashboard/page-editor-view.tsx` exporting `PageEditorView`:
+  - 3-column layout `grid-cols-1 lg:grid-cols-5` (left = page selector col-span-1, center = editor col-span-2, right = live preview col-span-2 sticky).
+  - Left page-selector Card: p-4 border-b with search Input (with Search icon) + scrollable `max-h-[70vh]` list (SCROLLBAR_CLS) of pages from currentAudit.pages. Each item shows red dot if issuesCount > 0, truncated URL (30 chars), title (or italic "No title"), word count Badge with Hash icon, and `noindex` Badge if indexable === false. Clicking sets selectedUrl. Active row has emerald bg/border + bold URL. Filtered count "{n}/{total}" in header.
+  - Center editor Card (p-5): page context strip with Globe icon + clickable URL link (ExternalLink icon, opens in new tab) + amber "Unsaved" Badge when dirty. Field sub-component with Label + char counter (right-aligned) + AI button.
+    * Title Input: counter `{n}/60` — green 30-60, amber <30 or >60, red >70 (titleCounterCls helper).
+    * Meta description Textarea (rows 3): counter `{n}/160` — green 120-160, amber <120 or >160, red >170 (descCounterCls helper).
+    * H1 Input.
+    * Canonical URL Input (mono font).
+    * Open Graph title Input + description Textarea (rows 2).
+    * "Generate with AI" button on Title / Meta description / H1 — only shown when field has a missing/short/too-long value (titleIssue/descIssue/h1Issue helpers pick correct issueType: missing_title / title_too_long / missing_meta_description / desc_too_long / missing_h1). Calls POST /api/ai/recommend with brand derived from audit URL, fills field with suggestion, toast success with model name. Per-field loading spinner (loadingField state).
+    * Actions: emerald Save (disabled when !dirty) → toast "Changes saved (demo)" + sets original = draft. Outline Reset (disabled when !dirty) → reverts. Inline status text "All changes saved" / "You have unsaved changes".
+  - Right preview column (lg:sticky lg:top-4): 3 stacked cards.
+    * SEO score Card: live computed score (0-100) based on title length (25pts), desc length (25pts), H1 presence (25pts), canonical URL validity (25pts). Big number colored green/amber/red, "Good"/"Needs work"/"Poor" Badge, Progress bar with inline color. Updates as you type.
+    * SERP preview Card: Google-styled box (white/zinc-950 bg, border). favicon circle + path breadcrumb, green URL line, blue title (`text-[#1a0dab] dark:text-blue-400`, truncated 60), gray description (`text-[#545454] dark:text-neutral-400`, line-clamp-2 truncated 160). Note about Google rewriting.
+    * Social card preview Card: 1.91:1 aspect ratio gradient placeholder (emerald/teal) with ImageIcon + "og:image · 1200 × 630" label, then below-card metadata: uppercase URL, blue OG title, gray OG description.
+  - Empty states: no audit → EmptyAudit "Run an audit to edit your pages"; no pages → Card with FileText icon "No pages were crawled in this audit"; no selection → Card "Select a page on the left to start editing".
+- Created `/home/z/my-project/src/components/dashboard/crawl-settings-view.tsx` exporting `CrawlSettingsView`:
+  - Header (SlidersHorizontal icon) + outline "Reset defaults" button (RotateCcw icon) → restores DEFAULT_SETTINGS + toast.
+  - 2-col layout `grid-cols-1 lg:grid-cols-3` (left = settings form + engine selection col-span-2; right = preset manager + summary sticky col-span-1).
+  - Settings form Card (p-6) with SlidersHorizontal icon header + Separator:
+    * Crawl depth Slider (1-100, default 50) with emerald Badge showing current value + min/max labels.
+    * SwitchRow sub-component (icon + label + hint + Switch) for: Follow redirects (default on), Check robots.txt (default on), Render JavaScript (default on, hint styled as amber note "Slower but more accurate for JS-heavy sites"), Check subdomains (default off), Crawl external links (default off). Separators between rows.
+    * User agent Select (UfuqAuditBot / Googlebot / Bingbot / Custom, default UfuqAuditBot) — when Custom selected, shows additional mono Input for custom UA string.
+    * Crawl delay Slider (0-5000ms step 50, default 200ms) with Badge showing current value + "aggressive / polite" labels.
+    * Max concurrent Slider (1-20, default 5) with Badge.
+    * Exclude paths Textarea (rows 3, mono) with code-styled hint examples.
+    * Include only paths Textarea (rows 2, mono, optional).
+  - Engine selection Card (p-6): 6 engine checkboxes in `grid-cols-1 sm:grid-cols-2`. Each engine label is a clickable Card-style row with emerald border/bg when checked, showing engine icon (colored per CATEGORY_META color) + label + "Weight: N%". EngineCheckbox uses data-[state=checked]:bg-emerald-600 override. Header has "X/6 enabled" Badge. Warning banner if 0 engines selected. Footer shows total weight.
+  - Preset manager Card (sticky): "Load a preset" Select with 3 mock presets (Quick check / Full audit / AEO focus) + any saved presets. Apply preset button (emerald outline). "Save as preset" button → Dialog with name Input + Save/Cancel → toast "Preset saved" (with simulated 400ms delay + spinner). Saved presets appear in a list below.
+  - Summary Card (sticky, right column): "Summary" header with amber "Modified" Badge when dirty. Bulleted list of: depth, enabled engines, options (redirects/robots/JS render/subdomains/external links), user agent, crawl delay + concurrent. Est time `~{n}s · 1 credit` (computed from depth + renderJs multiplier). Emerald "Run audit" button → setView("landing") + toast "Settings saved — enter a URL on the home page to start" (disabled when 0 engines selected).
+- Style rules respected: NO indigo/blue primary (emerald/teal accent throughout — the only blue usage is SERP preview title `#1a0dab` per explicit spec instruction for Google-like colors); p-5/p-6 cards; gap-4/gap-6 spacing; lucide-react icons; sonner toasts; "use client"; strict TS (interfaces PageEditState/AiRecommendResponse/AiRecommendError/EngineOption/EngineKey/CrawlSettings/Preset/UserAgentKey union type, no `any`); loading + empty states everywhere; dark mode `dark:` prefixes on every hardcoded color; SCROLLBAR_CLS utility for max-h-[70vh] overflow-y-auto with custom scrollbar.
+- Verification: `bun run lint` PASS (exit 0, no output). `bunx tsc --noEmit | grep -E "page-editor|crawl-settings"` → 0 lines (both new files clean). Remaining tsc errors are only pre-existing unrelated ones in `examples/websocket/` and `skills/` dirs. Fixed one TS error during dev: extended EngineOption.icon type to `React.ComponentType<{ className?: string; style?: React.CSSProperties }>` so engine icons can receive colored `style` prop (mirrors activity-feed-view.tsx device-icon pattern).
+
+Stage Summary:
+- Files created:
+  - src/components/dashboard/page-editor-view.tsx (PageEditorView — ~600 lines)
+  - src/components/dashboard/crawl-settings-view.tsx (CrawlSettingsView — ~790 lines)
+- No files modified outside scope (page.tsx imports + routing for "page-editor" / "crawl-settings" already wired by prior tasks; sidebar entries already present in store.ts).
+- Key decisions:
+  • Page editor: dirty-state tracking via JSON.stringify(draft) vs JSON.stringify(original) comparison; AI buttons only appear when a field has an actual issue (missing/short/too-long) — issueType chosen dynamically from current value. SEO score is live + computed locally (4×25 points for title/desc/H1/canonical). SERP preview uses inline arbitrary Tailwind color classes for Google-authentic look (#1a0dab title, #006621-ish URL via emerald-700, #545454 description) with dark-mode variants.
+  • Social card uses 1.91:1 aspect ratio (the de-facto OG image size) with emerald/teal gradient placeholder — no real image needed.
+  • Crawl settings: presets split into "stock" (Quick check / Full audit / AEO focus) and "saved" (user-created). Apply requires explicit button click (pendingPreset → presetId). Run audit navigates to landing view (URL input) rather than auto-starting — matches existing flow where audit-progress is entered from landing.
+  • EngineCheckbox uses `data-[state=checked]:bg-emerald-600` to override default primary color, matching brand accent. Engine colors come from CATEGORY_META (technical=#6366f1 etc.) — these are display-only (icon stroke color) and not "primary" usage, consistent with existing dashboard pattern in dashboard-view top priorities.
+  • Estimate formula: `max(5, round(depth/4))` seconds, multiplied by 1.8 when JS rendering is on — gives ~22s for default (50 pages + JS render), displayed as "~22s · 1 credit".
+
+---
+Task ID: cron-review-9
+Agent: webDevReview cron (Z.ai Code)
+Task: QA pass + bug fixes + new features (On-page SEO editor, Crawl settings)
+
+Work Log:
+- Read worklog.md (9 prior rounds: MVP + cron-review-1 through cron-review-8)
+- Full QA pass with agent-browser: tested mobile viewport (390×844 iPhone), integrations, billing, settings, VLM analysis
+- VLM findings (this round):
+  1. Integrations: PageSpeed showed "Disconnect" in grid but "Active" in summary list — status mismatch
+  2. Billing: "Change plan" button overlapped the top-right corner of the usage card
+  3. Mobile landing: dashboard preview cut off (minor, 7/10 polish)
+  4. Mobile dashboard: toast clipped by screen edge (minor)
+- Fixed all bugs:
+  - Integrations: added GSC to INITIAL_CONNECTED so it starts connected (was only psi+slack, causing the "Active in summary but not in grid" confusion). Now 3 integrations start connected: GSC, PageSpeed, Slack.
+  - Billing: moved the "Change plan" button from the right column (which caused overlap) INTO the plan info column below the "Next bill" text, with `mt-4` spacing. No more overlap.
+
+- New features (2 major):
+  1. On-page SEO Editor (page-editor-view.tsx) — edit meta tags with live SERP preview + AI generation:
+     - 3-column layout: page selector (left, max-h-70vh), editor form (center), live preview (right, sticky)
+     - Left: searchable page list from currentAudit.pages with title/wordCount/issues indicator
+     - Center: Title/Meta Description/H1/Canonical/OG Title/OG Description inputs with live character counters (green/amber/red buckets), "Generate with AI" button per field (calls POST /api/ai/recommend with appropriate issueType), dirty-state tracking, Save + Reset buttons
+     - Right: live SERP preview (Google-styled: blue title, green URL, gray desc), social card preview (1.91:1 aspect ratio), live SEO score indicator (Good/Needs work/Poor based on title+desc+H1+canonical)
+  2. Crawl Settings (crawl-settings-view.tsx) — configure audit scope + depth + engine selection:
+     - Settings form card: crawl depth slider (1-100), follow redirects switch, check robots.txt switch, render JavaScript switch (with amber note), check subdomains switch, crawl external links switch, user agent select (UfuqAuditBot/Googlebot/Bingbot/Custom), crawl delay slider (0-5000ms), max concurrent slider (1-20), exclude/include paths textareas
+     - Engine selection card: 6 checkboxes (Technical SEO/Content/Performance/AEO/GEO/Security) with per-engine weight display, warning banner if 0 selected
+     - Preset manager: 3 stock presets (Quick check/Full audit/AEO focus) + Save as preset dialog
+     - Summary + Run card: bulleted settings summary, estimated time + cost (mock), emerald Run button → setView("landing")
+
+- New sidebar entries: Page Editor (FileEdit icon), Crawl Settings (SlidersHorizontal icon) — both always-enabled
+- Store + page.tsx routing updated with page-editor + crawl-settings ViewKeys
+
+Stage Summary:
+- Files created:
+  - src/components/dashboard/page-editor-view.tsx (PageEditorView)
+  - src/components/dashboard/crawl-settings-view.tsx (CrawlSettingsView)
+- Files modified:
+  - src/lib/store.ts (page-editor + crawl-settings ViewKeys + sidebar entries)
+  - src/app/page.tsx (new view routing)
+  - src/components/layout/sidebar.tsx (FileEdit + SlidersHorizontal icons, always-enabled list)
+  - src/components/settings/integrations-view.tsx (GSC added to INITIAL_CONNECTED)
+  - src/components/settings/billing-view.tsx (Change plan button moved inside plan info column)
+- Lint: PASS. tsc: 0 errors in src. No console errors.
+- Page Editor: 3-column layout renders, page selector, editor form with char counters, live SERP preview, AI generation. VLM 9/10 polish.
+- Crawl Settings: settings form, engine selection, preset manager, summary + run. VLM 9/10 polish.
+- Integrations: GSC now connected initially — no more status mismatch. VLM confirmed "no bugs."
+- Billing: Change plan button no longer overlaps. VLM confirmed "no bugs, 9/10 polish."
+- Dev server running on :3000, dev.log clean.
+
+Next-phase opportunities:
+- Google Search Console OAuth integration (real data)
+- Backend cron job to execute enabled scheduled audits
+- Real backlink API integration (Ahrefs/Moz/Semrush)
+- WordPress/Shopify CMS plugins
+- Real API proxy for try-it panel
+- Pagination for activity feed
+- Persist crawl settings + presets to DB
