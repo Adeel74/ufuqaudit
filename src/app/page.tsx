@@ -23,6 +23,8 @@ import { LinkGraphView } from "@/components/dashboard/link-graph-view";
 import { ScheduledAuditsView } from "@/components/dashboard/scheduled-view";
 import { SearchConsoleView } from "@/components/dashboard/search-console-view";
 import { EmailReportsView } from "@/components/dashboard/email-reports-view";
+import { ActivityFeedView } from "@/components/dashboard/activity-feed-view";
+import { ApiDocsView } from "@/components/dashboard/api-docs-view";
 import { ClientPortalView } from "@/components/dashboard/client-portal-view";
 import { ReportsView } from "@/components/reports/reports-view";
 import { AdminView } from "@/components/admin/admin-view";
@@ -105,6 +107,8 @@ export default function Home() {
       case "search-console": return <SearchConsoleView />;
       case "portal": return <ClientPortalView />;
       case "email": return <EmailReportsView />;
+      case "activity": return <ActivityFeedView />;
+      case "api-docs": return <ApiDocsView />;
       case "reports": return <ReportsView />;
       case "admin": return <AdminView />;
       case "settings": return <SettingsView />;
@@ -133,7 +137,7 @@ export default function Home() {
         {/* Main content */}
         <main className="flex-1 min-w-0 overflow-x-hidden">
           <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-            {currentAudit || view === "admin" || view === "settings" || view === "billing" || view === "integrations" || view === "reports" || view === "history" || view === "competitors" || view === "ai-chat" || view === "tools" || view === "keywords" || view === "backlinks" || view === "content" || view === "link-graph" || view === "scheduled" || view === "portal" || view === "search-console" || view === "email" ? (
+            {currentAudit || view === "admin" || view === "settings" || view === "billing" || view === "integrations" || view === "reports" || view === "history" || view === "competitors" || view === "ai-chat" || view === "tools" || view === "keywords" || view === "backlinks" || view === "content" || view === "link-graph" || view === "scheduled" || view === "portal" || view === "search-console" || view === "email" || view === "activity" || view === "api-docs" ? (
               renderView()
             ) : (
               <EmptyState onRun={() => setView("landing")} />

@@ -718,7 +718,7 @@ export function SearchConsoleView() {
                   {countries.length}
                 </Badge>
               </div>
-              <div style={{ height: 280 }}>
+              <div style={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={countries}
@@ -742,6 +742,7 @@ export function SearchConsoleView() {
                       tickLine={false}
                       axisLine={false}
                       width={108}
+                      interval={0}
                     />
                     <RTooltip
                       contentStyle={{

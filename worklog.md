@@ -836,3 +836,104 @@ Next-phase opportunities:
 - Real backlink API integration (Ahrefs/Moz/Semrush)
 - WordPress/Shopify CMS plugins
 - On-page SEO editor
+
+---
+Task ID: 16
+Agent: frontend-styling-expert (activity + api-docs)
+Task: Build Team Activity feed + API Documentation views
+
+Work Log:
+- Read worklog.md, shared.tsx (ViewHeader/StatCard/EmptyAudit), store.ts, /api/activity/route.ts + /api/api-keys/route.ts response shapes, email-reports-view.tsx + client-portal-view.tsx + search-console-view.tsx for EMERALD_BTN/SCROLLBAR_CLS/zebra/alert-dialog conventions, page.tsx (routing for "activity" → ActivityFeedView + "api-docs" → ApiDocsView already wired).
+- Created `/home/z/my-project/src/components/dashboard/activity-feed-view.tsx` exporting `ActivityFeedView`:
+  - Fetches `GET /api/activity` on mount with skeleton (4 StatCards + 5-row timeline skeleton) and retry-on-error empty state.
+  - Header (Activity icon) + 4 StatCards: Total Activities (emerald), Audits Run (count of category=audit), Reports Generated (count of category=report), Team Actions (count of category=team).
+  - Filter bar Card: 8 category pill buttons (All / Audits / Reports / Keywords / Backlinks / Team / Settings / Integrations) with emerald active state + search input (filters by userName / description / targetName / action).
+  - Vertical timeline (NOT a table): each row = avatar circle (initials, color seeded by hashStr(userName) into 8-color palette) + description with targetName bolded via renderDescription() + category badge (colored per CATEGORY_META) + relative timestamp via relTime(); vertical connector line via absolute left-border; category dot anchored to avatar bottom-right.
+  - CATEGORY_META color map: audit=emerald, report=violet, keyword=sky, backlink=amber, team=teal, settings=slate, integration=rose (NO indigo/blue).
+  - max-h-[60vh] overflow-y-auto with custom scrollbar classes; hover:bg-muted/40 on rows; empty state with "Clear filters" button when search/category set and no matches.
+- Created `/home/z/my-project/src/components/dashboard/api-docs-view.tsx` exporting `ApiDocsView`:
+  - Fetches `GET /api/api-keys` on mount; loading skeleton; non-blocking error banner in keys panel (docs always render since they're static).
+  - Header (Terminal icon) + subtitle "Build with the UfuqAudit API".
+  - Top row: Base URL card (`https://api.ufuqaudit.app/v1` with Copy button + Authorization hint) + Rate limits card (350/1000 per hour, Pro plan, Progress bar at 35% with `[&>div]:bg-emerald-500` emerald indicator + "resets in 42m" hint).
+  - 2-col grid (lg:3): left col-span-2 = endpoint docs Card with SCROLLBAR_CLS (max-h-[70vh]); right col-span-1 = sticky (lg:sticky lg:top-4) stack with API Keys Card + Try-it Card.
+  - Endpoint docs: 10 endpoints across 5 groups (Audits: run/list/get; Issues: list/fix; Keywords: list; Backlinks: list; Reports: ai/recommend + email/send). Each endpoint row = Method badge (GET=emerald, POST=amber, DELETE=red, PUT=slate) + monospace path + description + expandable detail with params table (zebra TableBody, Name/Type/Required/Description columns), cURL example (pre + Copy button), JSON response (pre). EndpointCard uses ChevronDown/Right toggle.
+  - API Keys panel: "Create key" emerald button → Dialog with name input → POST /api/api-keys → switches to "Key created" view showing full key ONCE in pre with Copy button + amber warning "You won't see this again"; Done button closes & clears. Keys list: name + status badge (active=emerald/revoked=slate) + masked key (mono) + created date + requests count (compact fmt) + last used (relTime). Each active key has "Revoke" ghost button (red text) → AlertDialog confirm with red destructive Action + spinner during DELETE.
+  - Try-it panel: method Select (GET/POST/DELETE/PUT) + path Input (mono) + emerald Send button → 600ms simulated delay → shows mock JSON sample response in pre with Copy button + amber note "Try-it returns a mock sample response — doesn't actually call the API".
+  - SCROLLBAR_CLS reused (max-h-[70vh]) for both endpoint docs and keys list.
+- Style rules respected: NO indigo/blue primary (emerald/teal accent throughout, with violet/sky/amber/rose/slate only for category badges/method badges per spec); p-4/p-5 cards; gap-4/gap-6 spacing; lucide-react icons; sonner toasts; "use client"; strict TS (interfaces for ActivityItem/ActivityResponse/ApiKey/KeysResponse/CreateKeyResponse/ParamRow/Endpoint/EndpointGroup, Method union type, no `any`); loading + empty states everywhere; dark mode `dark:` prefixes on every hardcoded color; zebra TableBody on params table; pre blocks use `bg-muted p-4 rounded-lg overflow-x-auto text-xs font-mono` + Copy button.
+- Verification: `bun run lint` PASS (exit 0, no output). `bunx tsc --noEmit | grep -E "activity-feed|api-docs"` → 0 lines (both new files clean). Remaining tsc errors are only the pre-existing unrelated ones in `examples/websocket/` and `skills/` dirs.
+
+Stage Summary:
+- Files created:
+  - src/components/dashboard/activity-feed-view.tsx (ActivityFeedView — ~430 lines)
+  - src/components/dashboard/api-docs-view.tsx (ApiDocsView — ~720 lines)
+- No files modified outside scope (page.tsx imports + routing for "activity" / "api-docs" already wired by prior tasks).
+- Key decisions:
+  • Avatar color: 8-color palette (emerald/teal/amber/rose/violet/sky/pink/lime) indexed by `hashStr(userName) % 8` — deterministic per user, distinct across the 5 seeded users (SC=emerald, MR=rose, AH=teal, LP=violet, DU=pink).
+  • Timeline connector: a single `absolute left-[18px] top-2 bottom-2 w-px bg-border` div positioned to align with avatar centers (avatar = 36px wide / 18px radius), with each avatar using `ring-2 ring-background` so it sits cleanly on top of the line. Category dot (`-bottom-0.5 -right-0.5 w-3 h-3`) anchored to avatar gives a visual category indicator without crowding the description.
+  • renderDescription(): splits the description string at the index of `targetName` so the target becomes `<span className="font-semibold text-foreground">`. Falls back to plain text if targetName is empty or not found in description.
+  • Method badges: explicit `Record<Method, string>` mapping (GET=emerald, POST=amber, DELETE=red, PUT=slate). Width fixed at w-16 so paths align.
+  • Create-key dialog has two states: name-input form → after POST succeeds, switches to "Key created" view inside the same DialogContent (no second dialog needed). Closing the dialog clears `createdKey` so reopening shows the form again.
+  • Revoke uses AlertDialog (not Dialog) for destructive confirmation; Action button is red (`bg-red-600 hover:bg-red-700 text-white focus:ring-red-500`) with `e.preventDefault()` to keep the dialog open during the DELETE call, then closes via setRevokeTarget(null) on success.
+  • Try-it panel is intentionally mock (600ms setTimeout → static MOCK_SAMPLE_RESPONSE) per spec — doesn't hit the real API. The amber note makes this explicit so users don't expect real responses.
+  • Rate limits card uses Progress with `[&>div]:bg-emerald-500` to override the default primary-color indicator with emerald, matching the brand accent.
+  • Endpoint docs left column is scrollable (max-h-[70vh]) independently from the right sticky column — so users can browse endpoints while keeping the keys + try-it panel in view on desktop.
+
+---
+Task ID: cron-review-8
+Agent: webDevReview cron (Z.ai Code)
+Task: QA pass + bug fixes + new features (Team Activity feed, API Documentation)
+
+Work Log:
+- Read worklog.md (8 prior rounds: MVP + cron-review-1 through cron-review-7)
+- Full QA pass with agent-browser: tested search console tabs (Queries/Pages/Countries/Devices), VLM analysis
+- VLM findings (this round):
+  1. Search Console countries chart: Y-axis labels cut off at top (some countries not showing)
+  2. Search Console: VLM initially reported 30-day chart "empty" on non-Queries tabs — investigated and found the chart IS above the tabs (renders on all tabs), VLM was looking at the wrong viewport area. Confirmed chart renders correctly on all tabs via zoomed screenshots.
+- Fixed: Search Console countries chart — added `interval={0}` to YAxis (forces all country labels to render) + increased chart height from 280→300px. VLM confirmed: "all country labels visible, no bugs."
+
+- New features (2 major):
+  1. Team Activity Feed (activity-feed-view.tsx + /api/activity) — chronological timeline of team actions:
+     - 4 StatCards (Total Activities, Audits Run, Reports Generated, Team Actions)
+     - Vertical timeline (NOT a table) with user avatars (colored by name hash), action descriptions (targetName bolded), relative timestamps, category badges
+     - Vertical connector line between items, category dot on avatar
+     - Filter bar: category pill buttons (All/Audits/Reports/Keywords/Backlinks/Team/Settings/Integrations) + search input
+     - Category color mapping: audit=emerald, report=violet, keyword=sky, backlink=amber, team=teal, settings=slate, integration=rose
+     - API: 15 mock activities across 5 users (Sarah Chen, Mike Rodriguez, Amir Hassan, Lena Petrova, Demo User) with varied actions (ran_audit, generated_report, added_keyword, found_backlink, invited_member, scheduled_audit, connected_integration, shared_portal, fixed_issue, etc.)
+  2. API Documentation (api-docs-view.tsx + /api/api-keys) — interactive API docs + key management:
+     - 2-column layout: endpoint docs (left, scrollable) + API keys + try-it panel (right, sticky)
+     - 10 endpoints across 5 groups (Audits, Issues, Keywords, Backlinks, Reports), each with method badge (GET=emerald, POST=amber, DELETE=red), monospace path, expandable detail (params table + curl example + JSON response in `<pre>` with Copy buttons)
+     - API Keys panel: list of keys (name, masked key, created, last used, requests, status badge), Create key dialog (name → POST → shows full key ONCE with Copy + warning), Revoke button (AlertDialog → DELETE)
+     - Try-it panel: method select + path input + Send button → mock JSON response (600ms delay)
+     - Base URL card with Copy button, Rate limits card with emerald progress bar at 35%
+     - API: GET list + POST create (returns full key once) + DELETE revoke
+
+- New API routes: /api/activity (GET — 15 mock team activities), /api/api-keys (GET + POST + DELETE)
+- New sidebar entries: Activity (Activity icon), API Docs (Terminal icon) — both always-enabled
+- Store + page.tsx routing updated with activity + api-docs ViewKeys
+
+Stage Summary:
+- Files created:
+  - src/components/dashboard/activity-feed-view.tsx (ActivityFeedView)
+  - src/components/dashboard/api-docs-view.tsx (ApiDocsView)
+  - src/app/api/activity/route.ts (team activity feed data)
+  - src/app/api/api-keys/route.ts (API key CRUD)
+- Files modified:
+  - src/lib/store.ts (activity + api-docs ViewKeys + sidebar entries)
+  - src/app/page.tsx (new view routing)
+  - src/components/layout/sidebar.tsx (Activity + Terminal icons, always-enabled list)
+  - src/components/dashboard/search-console-view.tsx (countries chart YAxis interval=0 + height 300)
+- Lint: PASS. tsc: 0 errors in src. No console errors.
+- Activity feed: timeline renders with 15 activities, avatars, category badges, filter pills, search. VLM 9/10 polish.
+- API docs: 10 endpoints with expandable details (params/curl/JSON), API key management (create/revoke), try-it panel, rate limits. VLM 9/10 polish.
+- Search Console countries chart: all country labels now visible.
+- Dev server running on :3000, dev.log clean.
+
+Next-phase opportunities:
+- Google Search Console OAuth integration (real data)
+- Backend cron job to execute enabled scheduled audits
+- Real backlink API integration (Ahrefs/Moz/Semrush)
+- WordPress/Shopify CMS plugins
+- On-page SEO editor
+- Real API proxy for try-it panel
+- Pagination for activity feed
