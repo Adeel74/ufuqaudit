@@ -95,26 +95,35 @@ function computeAeoBreakdown(audit: AuditResult): AeoBreakdown {
   const scaled: AeoBreakdown = {} as AeoBreakdown;
   if (rawAvg <= 0) {
     for (const k of keys) scaled[k] = target;
-  } else {
-    // Blend raw toward target so average approaches target (70% target, 30% raw shape).
+    return scaled;
+  }
+  // Blend raw toward target so average approaches target (70% target, 30% raw shape).
+  for (const k of keys) {
+    const rel = raw[k] / rawAvg; // 0..~3
+    const blended = target * 0.7 + (target * rel * 0.3);
+    scaled[k] = Math.max(0, Math.min(100, Math.round(blended)));
+  }
+  // Iteratively nudge the average to EXACTLY equal target.
+  // Distribute the residual ±1 at a time across the most-adjustable scores
+  // (those farthest from the 0/100 bounds) until the average matches.
+  for (let iter = 0; iter < 50; iter++) {
+    const sum = keys.reduce((s, k) => s + scaled[k], 0);
+    const avg = sum / keys.length;
+    const delta = target - avg;
+    if (Math.abs(delta) < 0.5) break; // close enough
+    const direction = delta > 0 ? 1 : -1;
+    // Pick the score with the most room to move in the needed direction
+    let best: keyof AeoBreakdown | null = null;
+    let bestRoom = 0;
     for (const k of keys) {
-      const rel = raw[k] / rawAvg; // 0..~3
-      const blended = target * 0.7 + (target * rel * 0.3);
-      scaled[k] = Math.max(0, Math.min(100, Math.round(blended)));
+      const room = direction > 0 ? 100 - scaled[k] : scaled[k];
+      if (room > bestRoom) {
+        bestRoom = room;
+        best = k;
+      }
     }
-    // Final micro-adjust: nudge each by the residual so the average EXACTLY equals target.
-    const scaledAvg = keys.reduce((s, k) => s + scaled[k], 0) / keys.length;
-    const delta = Math.round(target - scaledAvg);
-    // Spread the delta across the scores that have room (not at 100/0).
-    let remaining = delta;
-    const adjustable = keys.filter((k) => scaled[k] > 0 && scaled[k] < 100);
-    const step = adjustable.length ? Math.ceil(Math.abs(delta) / adjustable.length) * Math.sign(delta) : 0;
-    for (const k of adjustable) {
-      if (remaining === 0) break;
-      const adj = Math.abs(remaining) < Math.abs(step) ? remaining : step;
-      scaled[k] = Math.max(0, Math.min(100, scaled[k] + adj));
-      remaining -= adj;
-    }
+    if (!best || bestRoom === 0) break;
+    scaled[best] = scaled[best] + direction;
   }
   return scaled;
 }

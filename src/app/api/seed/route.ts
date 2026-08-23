@@ -114,10 +114,10 @@ export async function POST() {
     }
 
     const demoAudits = [
-      { url: "https://example.com", score: 62, technical: 68, content: 58, performance: 71, aeo: 55, geo: 48, security: 75, pages: 12, daysAgo: 28 },
-      { url: "https://example.com", score: 68, technical: 73, content: 64, performance: 76, aeo: 61, geo: 53, security: 80, pages: 12, daysAgo: 21 },
-      { url: "https://example.com", score: 71, technical: 78, content: 69, performance: 78, aeo: 64, geo: 58, security: 82, pages: 12, daysAgo: 14 },
-      { url: "https://example.com", score: 78, technical: 82, content: 74, performance: 81, aeo: 68, geo: 59, security: 92, pages: 12, daysAgo: 7 },
+      { url: "https://example.com", score: 62, technical: 68, content: 58, performance: 71, aeo: 55, geo: 48, security: 75, pages: 12, daysAgo: 28, hour: 9 },
+      { url: "https://example.com", score: 68, technical: 73, content: 64, performance: 76, aeo: 61, geo: 53, security: 80, pages: 12, daysAgo: 21, hour: 14 },
+      { url: "https://example.com", score: 71, technical: 78, content: 69, performance: 78, aeo: 64, geo: 58, security: 82, pages: 12, daysAgo: 14, hour: 11 },
+      { url: "https://example.com", score: 78, technical: 82, content: 74, performance: 81, aeo: 68, geo: 59, security: 92, pages: 12, daysAgo: 7, hour: 16 },
     ];
     let demoProject = await db.project.findFirst({ where: { userId: demoUser.id, url: "https://example.com" } });
     if (!demoProject) {
@@ -125,6 +125,7 @@ export async function POST() {
     }
     for (const s of demoAudits) {
       const auditDate = new Date(now - s.daysAgo * 86400000);
+      auditDate.setHours(s.hour, 30, 0, 0);
       await db.audit.create({
         data: {
           projectId: demoProject.id,

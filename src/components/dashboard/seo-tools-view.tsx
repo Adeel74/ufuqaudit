@@ -103,9 +103,9 @@ export function SeoToolsView() {
   return (
     <div className="space-y-6">
       <ViewHeader
-        title="SEO Tools"
-        subtitle="Generators & checkers to fix what your audit found"
-        icon={Wrench}
+        title={active.name}
+        subtitle={active.desc}
+        icon={active.icon}
       />
 
       <div className="grid lg:grid-cols-[260px_1fr] gap-6">

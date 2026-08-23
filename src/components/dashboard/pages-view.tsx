@@ -116,7 +116,7 @@ export function PagesView() {
           value={`${indexablePct}%`}
           icon={FileText}
           hint={`${indexableCount} of ${pages.length} pages`}
-          color="#10b981"
+          color={indexablePct >= 80 ? "#10b981" : indexablePct >= 50 ? "#f59e0b" : "#ef4444"}
         />
         <StatCard
           label="Avg Load Time"

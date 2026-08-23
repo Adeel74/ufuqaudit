@@ -82,15 +82,19 @@ function shortDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// When multiple audits fall on the same day, show time (HH:MM) instead of date
-// to keep the x-axis readable and non-repetitive.
-function trendLabel(audits: { createdAt: string }[], idx: number): string {
-  const cur = new Date(audits[idx].createdAt);
-  const sameDay = audits.some((a, i) => i !== idx && new Date(a.createdAt).toDateString() === cur.toDateString());
-  if (sameDay) {
-    return cur.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-  }
-  return cur.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+// Build consistent x-axis labels: if ANY two audits fall on the same calendar day,
+// use time (HH:MM) for ALL points; otherwise use short dates (MMM d).
+// This keeps the axis uniform (no mixing of "Jul 26" with "06:11 AM").
+function buildTrendLabels(audits: { createdAt: string }[]): string[] {
+  const dates = audits.map((a) => new Date(a.createdAt).toDateString());
+  const hasSameDay = new Set(dates).size < dates.length;
+  return audits.map((a) => {
+    const d = new Date(a.createdAt);
+    if (hasSameDay) {
+      return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+    }
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  });
 }
 
 function truncateUrl(u: string, n = 38): string {
@@ -196,8 +200,9 @@ export function AuditHistoryView() {
 
   // ---- Trend chart data (chronological) ----
   const chronoAudits = [...audits].reverse();
+  const trendLabels = buildTrendLabels(chronoAudits);
   const chrono = chronoAudits.map((a, idx) => ({
-    date: trendLabel(chronoAudits, idx),
+    date: trendLabels[idx],
     score: a.overallScore,
     url: a.url,
   }));
@@ -218,7 +223,7 @@ export function AuditHistoryView() {
 
   // ---- Category trend (chronological) ----
   const catTrend = chronoAudits.map((a, idx) => {
-    const row: Record<string, number | string> = { date: trendLabel(chronoAudits, idx) };
+    const row: Record<string, number | string> = { date: trendLabels[idx] };
     for (const c of CAT_FIELDS) row[c.label] = (a[c.field] as number) ?? 0;
     return row;
   });
