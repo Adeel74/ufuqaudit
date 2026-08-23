@@ -1,0 +1,737 @@
+     1→"use client";
+     2→
+     3→import * as React from "react";
+     4→import { ViewHeader, StatCard } from "@/components/dashboard/shared";
+     5→import { Card } from "@/components/ui/card";
+     6→import { Button } from "@/components/ui/button";
+     7→import { Input } from "@/components/ui/input";
+     8→import { Label } from "@/components/ui/label";
+     9→import { Badge } from "@/components/ui/badge";
+    10→import { Switch } from "@/components/ui/switch";
+    11→import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+    12→import {
+    13→  Table,
+    14→  TableBody,
+    15→  TableCell,
+    16→  TableHead,
+    17→  TableHeader,
+    18→  TableRow,
+    19→} from "@/components/ui/table";
+    20→import {
+    21→  Dialog,
+    22→  DialogClose,
+    23→  DialogContent,
+    24→  DialogFooter,
+    25→  DialogHeader,
+    26→  DialogTitle,
+    27→} from "@/components/ui/dialog";
+    28→import {
+    29→  AlertDialog,
+    30→  AlertDialogAction,
+    31→  AlertDialogCancel,
+    32→  AlertDialogContent,
+    33→  AlertDialogDescription,
+    34→  AlertDialogFooter,
+    35→  AlertDialogHeader,
+    36→  AlertDialogTitle,
+    37→} from "@/components/ui/alert-dialog";
+    38→import {
+    39→  DropdownMenu,
+    40→  DropdownMenuContent,
+    41→  DropdownMenuItem,
+    42→  DropdownMenuLabel,
+    43→  DropdownMenuSeparator,
+    44→  DropdownMenuSub,
+    45→  DropdownMenuSubContent,
+    46→  DropdownMenuSubTrigger,
+    47→  DropdownMenuTrigger,
+    48→} from "@/components/ui/dropdown-menu";
+    49→import {
+    50→  Select,
+    51→  SelectContent,
+    52→  SelectItem,
+    53→  SelectTrigger,
+    54→  SelectValue,
+    55→} from "@/components/ui/select";
+    56→import { toast } from "sonner";
+    57→import {
+    58→  ShieldCheck,
+    59→  Users,
+    60→  FileSearch,
+    61→  FolderTree,
+    62→  AlertOctagon,
+    63→  Activity,
+    64→  Plus,
+    65→  MoreVertical,
+    66→  Trash2,
+    67→  UserCog,
+    68→  CreditCard,
+    69→  Loader2,
+    70→  RefreshCw,
+    71→  Settings as SettingsIcon,
+    72→  Clock,
+    73→} from "lucide-react";
+    74→
+    75→// ---- API response shapes ----
+    76→interface AdminStats {
+    77→  counts: { users: number; audits: number; projects: number; issues: number };
+    78→  avgScore: number;
+    79→  recentAudits: Array<{
+    80→    id: string;
+    81→    url: string;
+    82→    overallScore: number;
+    83→    status: string;
+    84→    createdAt: string;
+    85→    user: string | null;
+    86→  }>;
+    87→}
+    88→interface AdminUser {
+    89→  id: string;
+    90→  email: string;
+    91→  name: string | null;
+    92→  role: string;
+    93→  plan: string;
+    94→  createdAt: string;
+    95→}
+    96→interface AuditLog {
+    97→  id: string;
+    98→  userId: string | null;
+    99→  action: string;
+   100→  entity: string;
+   101→  entityId: string | null;
+   102→  details: string | null;
+   103→  createdAt: string;
+   104→}
+   105→
+   106→const ROLES = ["user", "admin"] as const;
+   107→const PLANS = ["free", "starter", "pro", "agency"] as const;
+   108→
+   109→const EMERALD_BTN = "bg-emerald-600 hover:bg-emerald-700 text-white";
+   110→
+   111→function planBadge(plan: string): string {
+   112→  const map: Record<string, string> = {
+   113→    free: "bg-slate-100 text-slate-700 border-slate-200",
+   114→    starter: "bg-sky-50 text-sky-700 border-sky-200",
+   115→    pro: "bg-emerald-50 text-emerald-700 border-emerald-200",
+   116→    agency: "bg-violet-50 text-violet-700 border-violet-200",
+   117→  };
+   118→  return map[plan] ?? "bg-slate-100 text-slate-700 border-slate-200";
+   119→}
+   120→
+   121→function roleBadge(role: string): string {
+   122→  return role === "admin"
+   123→    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+   124→    : "bg-slate-100 text-slate-700 border-slate-200";
+   125→}
+   126→
+   127→function scoreColor(v: number): string {
+   128→  return v >= 80 ? "text-emerald-600" : v >= 60 ? "text-amber-600" : v >= 40 ? "text-orange-600" : "text-red-600";
+   129→}
+   130→
+   131→function formatDate(iso: string): string {
+   132→  if (!iso) return "—";
+   133→  const d = new Date(iso);
+   134→  if (isNaN(d.getTime())) return "—";
+   135→  return d.toLocaleString(undefined, {
+   136→    month: "short",
+   137→    day: "numeric",
+   138→    hour: "2-digit",
+   139→    minute: "2-digit",
+   140→  });
+   141→}
+   142→
+   143→function formatDateLong(iso: string): string {
+   144→  if (!iso) return "—";
+   145→  const d = new Date(iso);
+   146→  if (isNaN(d.getTime())) return "—";
+   147→  return d.toLocaleDateString(undefined, {
+   148→    year: "numeric",
+   149→    month: "short",
+   150→    day: "numeric",
+   151→  });
+   152→}
+   153→
+   154→function initials(name: string | null, email: string): string {
+   155→  if (name) {
+   156→    const parts = name.trim().split(/\s+/);
+   157→    return (parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? parts[0]?.[1] ?? "");
+   158→  }
+   159→  return email.slice(0, 2);
+   160→}
+   161→
+   162→export function AdminView() {
+   163→  const [stats, setStats] = React.useState<AdminStats | null>(null);
+   164→  const [users, setUsers] = React.useState<AdminUser[]>([]);
+   165→  const [logs, setLogs] = React.useState<AuditLog[]>([]);
+   166→  const [loading, setLoading] = React.useState(true);
+   167→  const [addOpen, setAddOpen] = React.useState(false);
+   168→  const [userToDelete, setUserToDelete] = React.useState<AdminUser | null>(null);
+   169→  const [deleting, setDeleting] = React.useState(false);
+   170→  const [refreshKey, setRefreshKey] = React.useState(0);
+   171→
+   172→  const [sysSettings, setSysSettings] = React.useState({
+   173→    maintenance: false,
+   174→    signups: true,
+   175→    aiRecs: true,
+   176→    freeAudit: true,
+   177→  });
+   178→
+   179→  const refreshAll = React.useCallback(async () => {
+   180→    setLoading(true);
+   181→    try {
+   182→      const [statsR, usersR, logsR] = await Promise.all([
+   183→        fetch("/api/admin/stats").then((r) => r.json() as Promise<AdminStats>),
+   184→        fetch("/api/admin/users").then((r) => r.json() as Promise<{ users: AdminUser[] }>),
+   185→        fetch("/api/admin/audit-logs").then((r) => r.json() as Promise<{ logs: AuditLog[] }>),
+   186→      ]);
+   187→      setStats(statsR);
+   188→      setUsers(usersR.users ?? []);
+   189→      setLogs(logsR.logs ?? []);
+   190→    } catch (e) {
+   191→      console.error(e);
+   192→      toast.error("Failed to load admin data");
+   193→    } finally {
+   194→      setLoading(false);
+   195→    }
+   196→  }, []);
+   197→
+   198→  React.useEffect(() => {
+   199→    void refreshAll();
+   200→  }, [refreshAll, refreshKey]);
+   201→
+   202→  async function patchUser(id: string, patch: { role?: string; plan?: string }) {
+   203→    try {
+   204→      const res = await fetch("/api/admin/users", {
+   205→        method: "PATCH",
+   206→        headers: { "Content-Type": "application/json" },
+   207→        body: JSON.stringify({ id, ...patch }),
+   208→      });
+   209→      if (!res.ok) throw new Error("patch failed");
+   210→      toast.success("User updated");
+   211→      setRefreshKey((k) => k + 1);
+   212→    } catch (e) {
+   213→      console.error(e);
+   214→      toast.error("Failed to update user");
+   215→    }
+   216→  }
+   217→
+   218→  async function deleteUser() {
+   219→    if (!userToDelete) return;
+   220→    setDeleting(true);
+   221→    try {
+   222→      const res = await fetch(`/api/admin/users?id=${encodeURIComponent(userToDelete.id)}`, {
+   223→        method: "DELETE",
+   224→      });
+   225→      if (!res.ok) throw new Error("delete failed");
+   226→      toast.success(`Removed ${userToDelete.email}`);
+   227→      setUserToDelete(null);
+   228→      setRefreshKey((k) => k + 1);
+   229→    } catch (e) {
+   230→      console.error(e);
+   231→      toast.error("Failed to delete user");
+   232→    } finally {
+   233→      setDeleting(false);
+   234→    }
+   235→  }
+   236→
+   237→  return (
+   238→    <div className="space-y-6">
+   239→      <ViewHeader
+   240→        title="Admin Panel"
+   241→        subtitle="System overview, user management & audit logs"
+   242→        icon={ShieldCheck}
+   243→        actions={
+   244→          <Button variant="outline" size="sm" onClick={() => setRefreshKey((k) => k + 1)}>
+   245→            <RefreshCw className="w-3.5 h-3.5 mr-1" /> Refresh
+   246→          </Button>
+   247→        }
+   248→      />
+   249→
+   250→      {/* Stat cards */}
+   251→      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+   252→        <StatCard label="Total Users" value={stats?.counts.users ?? "—"} icon={Users} color="#10b981" />
+   253→        <StatCard label="Total Audits" value={stats?.counts.audits ?? "—"} icon={FileSearch} color="#10b981" />
+   254→        <StatCard label="Projects" value={stats?.counts.projects ?? "—"} icon={FolderTree} color="#10b981" />
+   255→        <StatCard label="Issues" value={stats?.counts.issues ?? "—"} icon={AlertOctagon} color="#10b981" />
+   256→        <StatCard
+   257→          label="Avg Score"
+   258→          value={stats?.avgScore != null ? `${stats.avgScore}/100` : "—"}
+   259→          hint="Across all audits"
+   260→          icon={Activity}
+   261→          color="#10b981"
+   262→        />
+   263→      </div>
+   264→
+   265→      {/* Recent Audits + System Logs */}
+   266→      <div className="grid lg:grid-cols-2 gap-6">
+   267→        <Card className="p-5">
+   268→          <h3 className="font-semibold flex items-center gap-2 mb-3">
+   269→            <FileSearch className="w-4 h-4 text-emerald-600" /> Recent Audits
+   270→          </h3>
+   271→          <div className="max-h-[40vh] overflow-y-auto -mx-2 px-2">
+   272→            {loading ? (
+   273→              <SkeletonRows />
+   274→            ) : (
+   275→              <Table>
+   276→                <TableHeader>
+   277→                  <TableRow>
+   278→                    <TableHead className="min-w-[140px]">URL</TableHead>
+   279→                    <TableHead>User</TableHead>
+   280→                    <TableHead className="text-right">Score</TableHead>
+   281→                    <TableHead>Status</TableHead>
+   282→                    <TableHead className="whitespace-nowrap">Date</TableHead>
+   283→                  </TableRow>
+   284→                </TableHeader>
+   285→                <TableBody className="zebra">
+   286→                  {stats?.recentAudits.length === 0 && (
+   287→                    <TableRow>
+   288→                      <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+   289→                        No audits yet
+   290→                      </TableCell>
+   291→                    </TableRow>
+   292→                  )}
+   293→                  {stats?.recentAudits.map((a) => (
+   294→                    <TableRow key={a.id}>
+   295→                      <TableCell className="max-w-[200px] truncate font-medium" title={a.url}>
+   296→                        {a.url}
+   297→                      </TableCell>
+   298→                      <TableCell className="text-xs text-muted-foreground">{a.user ?? "—"}</TableCell>
+   299→                      <TableCell className={`font-semibold tabular-nums ${scoreColor(a.overallScore)}`}>
+   300→                        {a.overallScore}
+   301→                      </TableCell>
+   302→                      <TableCell>
+   303→                        <Badge variant="outline" className="capitalize">
+   304→                          {a.status}
+   305→                        </Badge>
+   306→                      </TableCell>
+   307→                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+   308→                        {formatDate(a.createdAt)}
+   309→                      </TableCell>
+   310→                    </TableRow>
+   311→                  ))}
+   312→                </TableBody>
+   313→              </Table>
+   314→            )}
+   315→          </div>
+   316→        </Card>
+   317→
+   318→        <Card className="p-5">
+   319→          <h3 className="font-semibold flex items-center gap-2 mb-3">
+   320→            <Activity className="w-4 h-4 text-emerald-600" /> System Audit Logs
+   321→          </h3>
+   322→          <div className="max-h-[40vh] overflow-y-auto -mx-2 px-2">
+   323→            {loading ? (
+   324→              <SkeletonRows />
+   325→            ) : (
+   326→              <Table>
+   327→                <TableHeader>
+   328→                  <TableRow>
+   329→                    <TableHead className="whitespace-nowrap">Date</TableHead>
+   330→                    <TableHead>Action</TableHead>
+   331→                    <TableHead>Entity</TableHead>
+   332→                    <TableHead>Details</TableHead>
+   333→                  </TableRow>
+   334→                </TableHeader>
+   335→                <TableBody className="zebra">
+   336→                  {logs.length === 0 && (
+   337→                    <TableRow>
+   338→                      <TableCell colSpan={4} className="text-center text-muted-foreground py-6">
+   339→                        No logs yet
+   340→                      </TableCell>
+   341→                    </TableRow>
+   342→                  )}
+   343→                  {logs.map((l) => (
+   344→                    <TableRow key={l.id}>
+   345→                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+   346→                        <Clock className="inline w-3 h-3 mr-1" />
+   347→                        {formatDate(l.createdAt)}
+   348→                      </TableCell>
+   349→                      <TableCell className="font-medium">{l.action}</TableCell>
+   350→                      <TableCell>
+   351→                        <Badge variant="outline" className="capitalize">
+   352→                          {l.entity}
+   353→                        </Badge>
+   354→                      </TableCell>
+   355→                      <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate" title={l.details ?? ""}>
+   356→                        {l.details ?? "—"}
+   357→                      </TableCell>
+   358→                    </TableRow>
+   359→                  ))}
+   360→                </TableBody>
+   361→              </Table>
+   362→            )}
+   363→          </div>
+   364→        </Card>
+   365→      </div>
+   366→
+   367→      {/* User management */}
+   368→      <Card className="p-5">
+   369→        <div className="flex items-center justify-between mb-3">
+   370→          <h3 className="font-semibold flex items-center gap-2">
+   371→            <Users className="w-4 h-4 text-emerald-600" /> User Management
+   372→          </h3>
+   373→          <Button size="sm" className={EMERALD_BTN} onClick={() => setAddOpen(true)}>
+   374→            <Plus className="w-3.5 h-3.5 mr-1" /> Add user
+   375→          </Button>
+   376→        </div>
+   377→        <div className="max-h-[60vh] overflow-y-auto -mx-2 px-2">
+   378→          {loading ? (
+   379→            <SkeletonRows />
+   380→          ) : (
+   381→            <Table>
+   382→              <TableHeader>
+   383→                <TableRow>
+   384→                  <TableHead>User</TableHead>
+   385→                  <TableHead>Role</TableHead>
+   386→                  <TableHead>Plan</TableHead>
+   387→                  <TableHead>Created</TableHead>
+   388→                  <TableHead className="text-right">Actions</TableHead>
+   389→                </TableRow>
+   390→              </TableHeader>
+   391→              <TableBody className="zebra">
+   392→                {users.length === 0 && (
+   393→                  <TableRow>
+   394→                    <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+   395→                      No users yet
+   396→                    </TableCell>
+   397→                  </TableRow>
+   398→                )}
+   399→                {users.map((u) => (
+   400→                  <TableRow key={u.id}>
+   401→                    <TableCell>
+   402→                      <div className="flex items-center gap-2">
+   403→                        <Avatar className="w-7 h-7">
+   404→                          <AvatarFallback className="bg-emerald-50 text-emerald-700 text-xs font-semibold">
+   405→                            {initials(u.name, u.email).toUpperCase()}
+   406→                          </AvatarFallback>
+   407→                        </Avatar>
+   408→                        <div>
+   409→                          <div className="font-medium text-sm">{u.name ?? u.email}</div>
+   410→                          <div className="text-xs text-muted-foreground">{u.email}</div>
+   411→                        </div>
+   412→                      </div>
+   413→                    </TableCell>
+   414→                    <TableCell>
+   415→                      <Badge variant="outline" className={`capitalize ${roleBadge(u.role)}`}>
+   416→                        {u.role}
+   417→                      </Badge>
+   418→                    </TableCell>
+   419→                    <TableCell>
+   420→                      <Badge variant="outline" className={`capitalize ${planBadge(u.plan)}`}>
+   421→                        {u.plan}
+   422→                      </Badge>
+   423→                    </TableCell>
+   424→                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+   425→                      {formatDateLong(u.createdAt)}
+   426→                    </TableCell>
+   427→                    <TableCell className="text-right">
+   428→                      <DropdownMenu>
+   429→                        <DropdownMenuTrigger asChild>
+   430→                          <Button variant="ghost" size="icon" className="h-7 w-7">
+   431→                            <MoreVertical className="w-4 h-4" />
+   432→                          </Button>
+   433→                        </DropdownMenuTrigger>
+   434→                        <DropdownMenuContent align="end">
+   435→                          <DropdownMenuLabel>Manage</DropdownMenuLabel>
+   436→                          <DropdownMenuSeparator />
+   437→                          <DropdownMenuSub>
+   438→                            <DropdownMenuSubTrigger className="flex items-center gap-2">
+   439→                              <UserCog className="w-3.5 h-3.5" /> Change role
+   440→                            </DropdownMenuSubTrigger>
+   441→                            <DropdownMenuSubContent>
+   442→                              {ROLES.map((r) => (
+   443→                                <DropdownMenuItem
+   444→                                  key={r}
+   445→                                  onClick={() => patchUser(u.id, { role: r })}
+   446→                                  className="capitalize"
+   447→                                >
+   448→                                  {r}
+   449→                                  {u.role === r && (
+   450→                                    <span className="ml-auto text-emerald-600">●</span>
+   451→                                  )}
+   452→                                </DropdownMenuItem>
+   453→                              ))}
+   454→                            </DropdownMenuSubContent>
+   455→                          </DropdownMenuSub>
+   456→                          <DropdownMenuSub>
+   457→                            <DropdownMenuSubTrigger className="flex items-center gap-2">
+   458→                              <CreditCard className="w-3.5 h-3.5" /> Change plan
+   459→                            </DropdownMenuSubTrigger>
+   460→                            <DropdownMenuSubContent>
+   461→                              {PLANS.map((p) => (
+   462→                                <DropdownMenuItem
+   463→                                  key={p}
+   464→                                  onClick={() => patchUser(u.id, { plan: p })}
+   465→                                  className="capitalize"
+   466→                                >
+   467→                                  {p}
+   468→                                  {u.plan === p && (
+   469→                                    <span className="ml-auto text-emerald-600">●</span>
+   470→                                  )}
+   471→                                </DropdownMenuItem>
+   472→                              ))}
+   473→                            </DropdownMenuSubContent>
+   474→                          </DropdownMenuSub>
+   475→                          <DropdownMenuSeparator />
+   476→                          <DropdownMenuItem
+   477→                            variant="destructive"
+   478→                            onClick={() => setUserToDelete(u)}
+   479→                            className="flex items-center gap-2"
+   480→                          >
+   481→                            <Trash2 className="w-3.5 h-3.5" /> Delete user
+   482→                          </DropdownMenuItem>
+   483→                        </DropdownMenuContent>
+   484→                      </DropdownMenu>
+   485→                    </TableCell>
+   486→                  </TableRow>
+   487→                ))}
+   488→              </TableBody>
+   489→            </Table>
+   490→          )}
+   491→        </div>
+   492→      </Card>
+   493→
+   494→      {/* System settings */}
+   495→      <Card className="p-5">
+   496→        <h3 className="font-semibold flex items-center gap-2 mb-4">
+   497→          <SettingsIcon className="w-4 h-4 text-emerald-600" /> System Settings
+   498→        </h3>
+   499→        <div className="grid sm:grid-cols-2 gap-3">
+   500→          <ToggleRow
+   501→            label="Maintenance mode"
+   502→            desc="Show a maintenance page to all visitors"
+   503→            checked={sysSettings.maintenance}
+   504→            onToggle={(v) => {
+   505→              setSysSettings({ ...sysSettings, maintenance: v });
+   506→              toast.success("Saved");
+   507→            }}
+   508→          />
+   509→          <ToggleRow
+   510→            label="New signups"
+   511→            desc="Allow new account registration"
+   512→            checked={sysSettings.signups}
+   513→            onToggle={(v) => {
+   514→              setSysSettings({ ...sysSettings, signups: v });
+   515→              toast.success("Saved");
+   516→            }}
+   517→          />
+   518→          <ToggleRow
+   519→            label="AI recommendations"
+   520→            desc="Enable AI-generated fixes for audits"
+   521→            checked={sysSettings.aiRecs}
+   522→            onToggle={(v) => {
+   523→              setSysSettings({ ...sysSettings, aiRecs: v });
+   524→              toast.success("Saved");
+   525→            }}
+   526→          />
+   527→          <ToggleRow
+   528→            label="Free audit"
+   529→            desc="Allow running a free audit without signup"
+   530→            checked={sysSettings.freeAudit}
+   531→            onToggle={(v) => {
+   532→              setSysSettings({ ...sysSettings, freeAudit: v });
+   533→              toast.success("Saved");
+   534→            }}
+   535→          />
+   536→        </div>
+   537→      </Card>
+   538→
+   539→      <AddUserDialog
+   540→        open={addOpen}
+   541→        onOpenChange={setAddOpen}
+   542→        onCreated={() => setRefreshKey((k) => k + 1)}
+   543→      />
+   544→
+   545→      <AlertDialog
+   546→        open={!!userToDelete}
+   547→        onOpenChange={(o) => {
+   548→          if (!o) setUserToDelete(null);
+   549→        }}
+   550→      >
+   551→        <AlertDialogContent>
+   552→          <AlertDialogHeader>
+   553→            <AlertDialogTitle>Delete user?</AlertDialogTitle>
+   554→            <AlertDialogDescription>
+   555→              This will permanently delete{" "}
+   556→              <span className="font-medium text-foreground">{userToDelete?.email}</span> and remove their
+   557→              access. This action cannot be undone.
+   558→            </AlertDialogDescription>
+   559→          </AlertDialogHeader>
+   560→          <AlertDialogFooter>
+   561→            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+   562→            <AlertDialogAction
+   563→              onClick={(e) => {
+   564→                e.preventDefault();
+   565→                void deleteUser();
+   566→              }}
+   567→              disabled={deleting}
+   568→              className="bg-red-600 hover:bg-red-700 text-white"
+   569→            >
+   570→              {deleting && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+   571→              Delete
+   572→            </AlertDialogAction>
+   573→          </AlertDialogFooter>
+   574→        </AlertDialogContent>
+   575→      </AlertDialog>
+   576→    </div>
+   577→  );
+   578→}
+   579→
+   580→function ToggleRow({
+   581→  label,
+   582→  desc,
+   583→  checked,
+   584→  onToggle,
+   585→}: {
+   586→  label: string;
+   587→  desc: string;
+   588→  checked: boolean;
+   589→  onToggle: (v: boolean) => void;
+   590→}) {
+   591→  return (
+   592→    <div className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-card">
+   593→      <div>
+   594→        <div className="text-sm font-medium">{label}</div>
+   595→        <div className="text-xs text-muted-foreground">{desc}</div>
+   596→      </div>
+   597→      <Switch checked={checked} onCheckedChange={onToggle} />
+   598→    </div>
+   599→  );
+   600→}
+   601→
+   602→function SkeletonRows() {
+   603→  return (
+   604→    <div className="space-y-2 py-4">
+   605→      {Array.from({ length: 4 }).map((_, i) => (
+   606→        <div key={i} className="h-8 rounded-md bg-muted/60 animate-pulse" />
+   607→      ))}
+   608→    </div>
+   609→  );
+   610→}
+   611→
+   612→function AddUserDialog({
+   613→  open,
+   614→  onOpenChange,
+   615→  onCreated,
+   616→}: {
+   617→  open: boolean;
+   618→  onOpenChange: (o: boolean) => void;
+   619→  onCreated: () => void;
+   620→}) {
+   621→  const [email, setEmail] = React.useState("");
+   622→  const [name, setName] = React.useState("");
+   623→  const [role, setRole] = React.useState<string>("user");
+   624→  const [plan, setPlan] = React.useState<string>("free");
+   625→  const [saving, setSaving] = React.useState(false);
+   626→
+   627→  async function submit() {
+   628→    if (!email.trim()) {
+   629→      toast.error("Email is required");
+   630→      return;
+   631→    }
+   632→    setSaving(true);
+   633→    try {
+   634→      const res = await fetch("/api/admin/users", {
+   635→        method: "POST",
+   636→        headers: { "Content-Type": "application/json" },
+   637→        body: JSON.stringify({
+   638→          email: email.trim(),
+   639→          name: name.trim() || undefined,
+   640→          role,
+   641→          plan,
+   642→        }),
+   643→      });
+   644→      if (!res.ok) {
+   645→        const err = (await res.json().catch(() => ({}))) as { error?: string };
+   646→        throw new Error(err.error ?? "create failed");
+   647→      }
+   648→      toast.success("User created");
+   649→      setEmail("");
+   650→      setName("");
+   651→      setRole("user");
+   652→      setPlan("free");
+   653→      onOpenChange(false);
+   654→      onCreated();
+   655→    } catch (e) {
+   656→      console.error(e);
+   657→      toast.error(e instanceof Error ? e.message : "Failed to create user");
+   658→    } finally {
+   659→      setSaving(false);
+   660→    }
+   661→  }
+   662→
+   663→  return (
+   664→    <Dialog open={open} onOpenChange={onOpenChange}>
+   665→      <DialogContent className="sm:max-w-md">
+   666→        <DialogHeader>
+   667→          <DialogTitle>Add new user</DialogTitle>
+   668→        </DialogHeader>
+   669→        <div className="grid gap-3">
+   670→          <div className="grid gap-1.5">
+   671→            <Label htmlFor="au-email">Email</Label>
+   672→            <Input
+   673→              id="au-email"
+   674→              type="email"
+   675→              placeholder="user@example.com"
+   676→              value={email}
+   677→              onChange={(e) => setEmail(e.target.value)}
+   678→            />
+   679→          </div>
+   680→          <div className="grid gap-1.5">
+   681→            <Label htmlFor="au-name">Name (optional)</Label>
+   682→            <Input
+   683→              id="au-name"
+   684→              placeholder="Jane Doe"
+   685→              value={name}
+   686→              onChange={(e) => setName(e.target.value)}
+   687→            />
+   688→          </div>
+   689→          <div className="grid grid-cols-2 gap-3">
+   690→            <div className="grid gap-1.5">
+   691→              <Label>Role</Label>
+   692→              <Select value={role} onValueChange={setRole}>
+   693→                <SelectTrigger className="w-full">
+   694→                  <SelectValue />
+   695→                </SelectTrigger>
+   696→                <SelectContent>
+   697→                  {ROLES.map((r) => (
+   698→                    <SelectItem key={r} value={r} className="capitalize">
+   699→                      {r}
+   700→                    </SelectItem>
+   701→                  ))}
+   702→                </SelectContent>
+   703→              </Select>
+   704→            </div>
+   705→            <div className="grid gap-1.5">
+   706→              <Label>Plan</Label>
+   707→              <Select value={plan} onValueChange={setPlan}>
+   708→                <SelectTrigger className="w-full">
+   709→                  <SelectValue />
+   710→                </SelectTrigger>
+   711→                <SelectContent>
+   712→                  {PLANS.map((p) => (
+   713→                    <SelectItem key={p} value={p} className="capitalize">
+   714→                      {p}
+   715→                    </SelectItem>
+   716→                  ))}
+   717→                </SelectContent>
+   718→              </Select>
+   719→            </div>
+   720→          </div>
+   721→        </div>
+   722→        <DialogFooter>
+   723→          <DialogClose asChild>
+   724→            <Button variant="outline" disabled={saving}>
+   725→              Cancel
+   726→            </Button>
+   727→          </DialogClose>
+   728→          <Button onClick={submit} disabled={saving} className={EMERALD_BTN}>
+   729→            {saving && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+   730→            Create user
+   731→          </Button>
+   732→        </DialogFooter>
+   733→      </DialogContent>
+   734→    </Dialog>
+   735→  );
+   736→}
+   737→

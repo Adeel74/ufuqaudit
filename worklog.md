@@ -1047,3 +1047,113 @@ Next-phase opportunities:
 - Real API proxy for try-it panel
 - Pagination for activity feed
 - Persist crawl settings + presets to DB
+
+---
+Task ID: SA-1
+Agent: frontend-styling-expert (super-admin-portal)
+Task: Refactor Admin into multi-tab Super Admin Portal
+
+Work Log:
+- Read worklog.md (9 prior rounds) for project context — emerald/teal accent, p-4/p-5 cards, sonner toasts, lucide-react icons, "use client", strict TS, max-h-[60vh] overflow-y-auto with custom scrollbar, zebra table striping via `className="zebra"` on `<tbody>`, dark mode `dark:` prefixes.
+- Read existing /home/z/my-project/src/components/admin/admin-view.tsx (736 lines) to understand the legacy single-page admin layout (stat cards + recent audits + system logs + user management + 4 system toggles + Add User dialog + AlertDialog delete confirm).
+- Read /home/z/my-project/src/components/dashboard/shared.tsx for ViewHeader/StatCard/SeverityBadge/CategoryChip/scoreColor, score-ui.tsx, types.ts (PLAN_TIERS, CATEGORY_META, SEVERITY_META), and admin API routes (/api/admin/stats, /users, /audit-logs, /organizations, /plans, /subscriptions, /transactions, /all-audits, /api/api-keys) to confirm response shapes match the spec.
+- Created /home/z/my-project/src/components/admin/admin-helpers.tsx (422 lines) — shared module with: SCROLLBAR_CLS, EMERALD_BTN constants; API response TypeScript interfaces (AdminStats, AdminUser, AuditLog, OrgRow, OrgStats, PlanConfig, SubRow, SubStats, TxRow, TxStats, AuditRow, AuditStats, ApiKeyRow); formatters (formatDate, formatDateLong, relativeTime, formatCompact, formatNumber, formatCurrency, formatDuration); badge-class helpers (planBadgeClass, roleBadgeClass, statusBadgeClass, providerBadgeClass, scoreTextColor, scoreHex); utilities (initials, maskKey, truncate, downloadCsv); reusable atoms (SkeletonRows, EmptyState, StatusPill). All `dark:` prefixed classes. NO indigo/blue anywhere.
+- Created /home/z/my-project/src/components/admin/sections/admin-dashboard-section.tsx (339 lines) — `AdminDashboardSection`: 3 rows of 4 StatCards each (Total Users, Active Users, New Today, New This Month / Total Audits, Projects, Avg Score, Monthly Revenue / Total API Requests, AI Tokens Used, Active Subs, Trial Users); Recharts AreaChart for 30-day user growth (emerald gradient), BarChart for 12-month revenue (emerald bars), PieChart donut for plan distribution (emerald/teal/amber/violet slices with legend), Real-time activity feed card (8 mock events with colored icons + relative timestamps, `max-h-[300px] overflow-y-auto`), and recent audits zebra-striped table with URL/score/status/date/user columns.
+- Created /home/z/my-project/src/components/admin/sections/admin-users-section.tsx (777 lines) — `AdminUsersSection`: 4 StatCards (Total Users, Active 65%, Admins, New This Month); filter bar (search input + role filter + plan filter + sort dropdown); zebra-striped users table (`max-h-[60vh] overflow-y-auto`) with 12 columns (checkbox, User with avatar initials + name + email, Role badge, Plan badge colored, Status pill, Projects, Audits, API Usage, AI Usage formatted compactly, Created, Last Login relative, Actions dropdown with View Profile/Edit/Suspend-Activate/Change Plan sub-menu/Change Role sub-menu/Reset Password/Delete); bulk-actions bar that appears when rows are selected (X selected · Bulk Suspend · Bulk Activate · Export CSV); user profile Sheet that slides in from the right showing account info, plan/role/status cards, usage meters (Projects/Audits/API/AI with colored progress bars), API keys list, login history (3 mock entries), Edit/Reset footer buttons; existing AddUserDialog and AlertDialog delete confirm preserved.
+- Created /home/z/my-project/src/components/admin/sections/admin-organizations-section.tsx (387 lines) — `AdminOrganizationsSection`: 4 StatCards (Total Orgs, Active, Suspended, Total Members); filter bar (search + status + plan); zebra-striped table with 14 columns (Org name+domain, Industry, Country, Plan badge, Members, Projects, Websites, Audits, API Requests, AI Tokens, Status badge, Created, Last Active relative, Actions dropdown View/Edit/Suspend-Activate/Delete); CreateOrgDialog with name/domain/industry/country/plan fields; EmptyState when no orgs.
+- Created /home/z/my-project/src/components/admin/sections/admin-plans-section.tsx (475 lines) — `AdminPlansSection`: 3 StatCards (Total Plans, Active Plans, Featured Plans); plan cards grid (Free, Starter, Pro, Agency) showing name, price monthly/yearly, trial-days badge, status badge, featured star + emerald ring highlight, compact limits grid (Projects/URLs/Audits/Scheduled/API/Rate/AI req/AI credits/PDF/Team), feature chips (White-label/GSC/GA4/AEO/GEO/AI Visibility), Edit + Archive buttons; comprehensive PlanBuilderDialog (sm:max-w-2xl, scrollable) with grouped sections — General (name, description, monthly/yearly price, currency, trial days, featured switch, status), API & AI limits (apiRequests, apiRateLimit, aiRequests, aiCredits, monthlyAudits, scheduledAudits), General limits (projects, websites, urlsPerCrawl, teamMembers, pdfReports, competitorAudits, keywordTracking, clientAccounts), Features (whiteLabel, gscIntegration, ga4Integration, aeo, geo, aiVisibility switches) — opens pre-filled when editing existing plan.
+- Created /home/z/my-project/src/components/admin/sections/admin-subscriptions-section.tsx (317 lines) — `AdminSubscriptionsSection`: 5 StatCards (Total Subs, Active, Trial, Past Due, MRR with ARR hint); filter bar (search + status filter All/Trial/Active/Past Due/Cancelled); zebra-striped table with 9 columns (User name+email, Organization, Plan badge, Amount formatted, Cycle, Status badge colored by state, Created, Renewal, Actions dropdown View/Upgrade/Downgrade/Change Cycle/Extend/Pause/Cancel); Sheet that slides in from right showing subscription details + history table (Previous/New/Date/Admin/Reason).
+- Created /home/z/my-project/src/components/admin/sections/admin-billing-section.tsx (302 lines) — `AdminBillingSection`: 5 StatCards (Total Revenue, MRR, Net Revenue, Refunds, Failed Payments); Recharts AreaChart for 12-month revenue trend (gross emerald + net teal gradient overlays, `h-[250px]`); zebra-striped transactions table (`max-h-[50vh] overflow-y-auto`) with 10 columns (Transaction ID monospace, User name+email, Organization, Plan, Amount formatted, Currency, Provider badge Stripe=emerald/Paddle=amber/PayPal=sky, Status badge paid=emerald/pending=amber/failed=red/refunded=slate, Date, Actions dropdown View invoice/Refund); payment providers card (Stripe/Paddle/PayPal with status badges + Configure buttons); AlertDialog refund confirm with orange destructive action.
+- Created /home/z/my-project/src/components/admin/sections/admin-api-keys-section.tsx (428 lines) — `AdminApiKeysSection`: 4 StatCards (Total Keys, Active Keys, Requests Today, Rate Limit Violations); Recharts LineChart for 30-day API requests trend (emerald, `h-[200px]`); zebra-striped API keys table with 7 columns (Name, Key masked monospace, Created, Last Used relative, Requests formatted, Status badge active=emerald/revoked=slate, Actions dropdown View usage/Regenerate/Revoke); CreateKeyDialog with name input → POST /api/api-keys → returns full key, shows it ONCE in a Copy-to-clipboard UI with amber warning banner; AlertDialog revoke confirm; endpoint analytics card with top 5 endpoints (Endpoint/Requests/Avg response/Error rate colored green/amber).
+- Created /home/z/my-project/src/components/admin/sections/admin-audits-section.tsx (328 lines) — `AdminAuditsSection`: 4 StatCards (Total Audits, Running, Completed, Failed); filter bar (search URL/user + status filter + score range filter All/0-40/40-60/60-80/80-100); zebra-striped audits table (`max-h-[60vh] overflow-y-auto`) with 11 columns (Audit ID truncated, URL with Tooltip showing full URL on hover, User name+email, Score colored badge using scoreHex, Status badge, Pages, Issues, Critical count red badge if >0, Duration formatted, Started relative, Actions dropdown View/Cancel (disabled if not running)/Retry (disabled if running)/Export/Generate report/Delete); AlertDialog delete confirm.
+- Created /home/z/my-project/src/components/admin/sections/admin-system-section.tsx (526 lines) — `AdminSystemSection`: General settings card (site name, default language, timezone, currency, date format — Selects); SaaS settings card with 4 original toggles (maintenance, signups, AI recs, free audit) PLUS 4 new ones (registration, trial enabled, trial duration input, free plan enabled) + Save SaaS settings button; Audit settings card with 5 sliders (maxCrawlDepth 1-1000, maxUrls 10-100000, crawlTimeout 1000-60000ms, concurrentCrawlers 1-20, retryAttempts 0-5) + user agent input + Save audit settings button; System health card with 8 services (Application, Database, Redis, Queue, Storage, Email, AI Provider, Payment Provider) — each with CheckCircle2 green ✓ or amber pulse for degraded, response time in ms; audit logs zebra-striped table (Date/Action/Entity/Details, `max-h-[50vh] overflow-y-auto`).
+- Refactored /home/z/my-project/src/components/admin/admin-view.tsx (105 lines, down from 736) into a multi-tab shell using shadcn `Tabs` with `defaultValue="dashboard"`. 9 tabs (Dashboard, Users, Organizations, Plans, Subscriptions, Billing, API Keys, Audits, System) — each TabsTrigger has lucide icon + label, TabsList is `inline-flex h-10 w-max` wrapped in `overflow-x-auto` parent with custom 1px scrollbar for mobile horizontal scroll. Tab content sections are conditionally mounted (only the active non-dashboard tab renders its section) to avoid loading all data upfront. A global Refresh-all button bumps `refreshKey` state passed to all sections for re-fetch. Exports `AdminView` (default, used by page.tsx). Initial cleanup of the legacy AddUserDialog and AlertDialog moved into the Users section file.
+- Verification (mandatory):
+  • `cd /home/z/my-project && bun run lint` → PASS (no output, exit 0, eslint reports 0 problems).
+  • `cd /home/z/my-project && bunx tsc --noEmit 2>&1 | grep -E "admin"` → 0 lines (no TS errors in any admin/sections file).
+  • Full tsc shows only 4 pre-existing errors in `examples/websocket/` (missing socket.io types — unrelated to admin code) and `skills/` (unrelated SDK type mismatches) — no admin-related errors introduced.
+- Visual QA via agent-browser + VLM (z-ai vision): navigated through onboarding wizard → dashboard → Admin sidebar entry → Super Admin Portal. Took screenshots of every tab (Dashboard, Users, Organizations, Plans, Subscriptions, Billing, API Keys, Audits, System) on desktop (1440×900) and a mobile snapshot (390×844). VLM confirmed all 9 tabs render correctly with their expected stat cards, tables, charts, and filter bars. Notes:
+  • Dashboard: 12 stat cards in 3 rows, AreaChart for user growth (emerald gradient), PieChart donut for plan distribution with legend, BarChart for revenue (emerald), activity feed with 8 mock events, recent audits table.
+  • Users: 12-column table with bulk checkboxes, color-coded role/plan badges, status pills with green/slate dots, kebab menu actions, filter bar (search/role/plan/sort), bulk actions bar appears when rows selected.
+  • Organizations: 14-column table with org avatar + domain, plan badges, status badges, kebab actions.
+  • Plans: 3 visible plan cards (Free / Starter with featured emerald ring / Professional) with prices, limits grid, feature chips; "Featured" Starter is correctly highlighted.
+  • Subscriptions: 5 stat cards, table with status-colored badges (trial=amber, active=emerald, past_due=orange, cancelled=red).
+  • Billing: 5 stat cards, AreaChart with gross (emerald) + net (teal) overlays, transactions table with provider/status color badges.
+  • API Keys: 4 stat cards, LineChart, masked keys in monospace, status badges, endpoint analytics with error-rate color coding.
+  • Audits: 4 stat cards, filter bar with status + score range dropdowns, table with score-colored badges, critical-count red badges.
+  • System: General settings, SaaS settings with 8 toggles + Save button, Audit settings with 5 sliders + UA input + Save, System health with 8 services (green ✓ with response times, AI Provider shown degraded amber pulse), Audit logs table.
+  • Mobile (390px): tabs scroll horizontally inside an `overflow-x-auto` wrapper with custom 1px scrollbar (verified scrollWidth=980 > clientWidth=358).
+- Temporarily added a DEV-only `window.__ufuqStore` export to store.ts to drive agent-browser E2E navigation through the onboarding flow (store is not persisted to localStorage). Reverted immediately after testing — production code is clean.
+
+Stage Summary:
+- Files created (11):
+  • src/components/admin/admin-helpers.tsx (422 lines) — shared types, formatters, badges, atoms
+  • src/components/admin/sections/admin-dashboard-section.tsx (339 lines) — AdminDashboardSection
+  • src/components/admin/sections/admin-users-section.tsx (777 lines) — AdminUsersSection
+  • src/components/admin/sections/admin-organizations-section.tsx (387 lines) — AdminOrganizationsSection
+  • src/components/admin/sections/admin-plans-section.tsx (475 lines) — AdminPlansSection
+  • src/components/admin/sections/admin-subscriptions-section.tsx (317 lines) — AdminSubscriptionsSection
+  • src/components/admin/sections/admin-billing-section.tsx (302 lines) — AdminBillingSection
+  • src/components/admin/sections/admin-api-keys-section.tsx (428 lines) — AdminApiKeysSection
+  • src/components/admin/sections/admin-audits-section.tsx (328 lines) — AdminAuditsSection
+  • src/components/admin/sections/admin-system-section.tsx (526 lines) — AdminSystemSection
+- Files modified (1):
+  • src/components/admin/admin-view.tsx (105 lines, down from 736) — completely refactored into multi-tab shell. Still exports `AdminView` as before so page.tsx routing is unchanged.
+- No files modified outside the admin/ scope (the store.ts change was reverted after E2E testing).
+- Total LOC for new admin code: ~4,406 lines (vs. 736 in the legacy single-file admin).
+- Key decisions:
+  • Each section is its own file (under `sections/`) rather than co-located in admin-view.tsx — easier to maintain and tree-shake. The main admin-view.tsx imports all 9 and renders them inside shadcn `Tabs`.
+  • Shared `admin-helpers.tsx` centralizes all response-shape interfaces, formatters, and badge-class strings so every section renders consistent styling (badge colors, dark-mode variants, compact number formatting).
+  • Tabs use `defaultValue="dashboard"` and the dashboard section is always mounted (it's the default landing view). For non-dashboard tabs, the section component is conditionally rendered (`{tab === "users" ? <AdminUsersSection /> : null}`) so we don't fire 8 simultaneous API requests on initial load — only when the user actually visits that tab.
+  • `refreshKey` state in admin-view is bumped by the "Refresh all" header button and passed to every section, which all use it in their useEffect dependency arrays to trigger re-fetch.
+  • NO indigo/blue primary anywhere — emerald (#10b981) for primary brand accent, teal (#14b8a6) for secondary, amber (#f59e0b) for warning/trial, violet (#8b5cf6) for AI/agency display, sky (#0ea5e9) only for PayPal provider badge (third-party brand color, not primary). All chart fills use the emerald family. Status colors match the dashboard pattern (active=emerald, trial=amber, past_due=orange, failed/cancelled=red, refunded=slate).
+  • Plan builder dialog (`sm:max-w-2xl max-h-[90vh] overflow-y-auto`) groups 14 numeric limit inputs + 6 boolean switches into 3 sections (General / API & AI / Features) with Separator dividers — much more usable than a flat list.
+  • User profile Sheet (`sm:max-w-lg`) gives a right-side drawer with usage meters using inline-styled colored progress bars (avoids the shadcn Progress default-emerald limitation while still respecting the brand palette).
+  • Bulk-actions bar in Users section uses an emerald-tinted banner that appears only when ≥1 row is selected — supports Suspend / Activate / Export CSV.
+  • Mobile responsiveness: TabsList uses `inline-flex w-max` inside an `overflow-x-auto` wrapper with a 1px custom scrollbar; all tables use `max-h-[50vh]` / `max-h-[60vh] overflow-y-auto` with the shared SCROLLBAR_CLS utility.
+- Lint: PASS (0 problems). tsc: 0 errors in src/. Dev server recompiled successfully on the first HMR after edits. All 9 tabs verified visually via agent-browser + VLM on desktop (1440×900) and mobile (390×844) viewports.
+
+---
+Task ID: SA-1 (Super Admin Portal)
+Agent: main (Z.ai Code) + frontend-styling-expert subagent
+Task: Refactor Admin into multi-tab Super Admin Portal (Phase 1 — Core Admin)
+
+Work Log:
+- Read worklog.md (9 prior cron-review rounds + MVP)
+- Created 5 new admin API routes:
+  - /api/admin/organizations (GET — 8 mock orgs with members/projects/audits/API usage)
+  - /api/admin/plans (GET + POST — 4 plans with full usage limits config)
+  - /api/admin/subscriptions (GET — 10 mock subs with trial/active/past_due/cancelled statuses + MRR/ARR stats)
+  - /api/admin/transactions (GET — 20 mock transactions with Stripe/Paddle/PayPal providers + paid/pending/failed/refunded statuses)
+  - /api/admin/all-audits (GET — all audits from DB with user info + stats)
+- Enhanced /api/admin/stats with 20+ KPIs: users/activeUsers/usersToday/usersThisMonth, audits/projects/issues/pages/recommendations, totalApiRequests/aiTokensUsed, monthlyRevenue/annualRevenue, activeSubscriptions/trialUsers/cancelledSubscriptions/failedPayments, avgScore, planDistribution
+- Delegated Super Admin Portal build to frontend-styling-expert subagent (Task SA-1):
+  - Refactored admin-view.tsx from 736 lines → 105-line Tabs shell
+  - Created 10 section files in src/components/admin/sections/:
+    - admin-dashboard-section.tsx (339 lines) — 10 KPI cards + user growth AreaChart + revenue BarChart + plan distribution donut + real-time activity feed + recent audits table
+    - admin-users-section.tsx (777 lines) — search/filter/sort, bulk actions (suspend/activate/export), user profile Sheet drawer, Add User dialog, delete confirm
+    - admin-organizations-section.tsx (387 lines) — 8 mock orgs with CRUD, filter/sort, industry/country/plan badges
+    - admin-plans-section.tsx (475 lines) — plan cards + full Plan Builder dialog with all usage limits (grouped into General/API/AI/Features sections)
+    - admin-subscriptions-section.tsx (317 lines) — 10 subs with status badges, Sheet detail view, upgrade/downgrade/cancel/pause actions
+    - admin-billing-section.tsx (302 lines) — 5 revenue KPIs + 12-month AreaChart + transactions table with provider badges + payment providers card
+    - admin-api-keys-section.tsx (428 lines) — 4 KPIs + 30-day LineChart + keys table + create/revoke + endpoint analytics
+    - admin-audits-section.tsx (328 lines) — all platform audits with filters (status/score range), actions (view/cancel/retry/delete/export/report)
+    - admin-system-section.tsx (526 lines) — 4 settings cards (General/SaaS/Audit/System Health) + audit logs table
+  - Created admin-helpers.tsx (422 lines) — shared types, formatters, badge classes
+- All 9 tabs verified via agent-browser + VLM (8-9/10 polish across all tabs)
+- Lazy mounting: only active tab fires API requests (avoids 8 simultaneous fetches)
+
+Stage Summary:
+- Files created: 11 (admin-view refactor + 9 sections + 1 helpers)
+- Files modified: 1 (admin-view.tsx — from 736→105 lines, now imports sections)
+- API routes created: 5 (organizations, plans, subscriptions, transactions, all-audits) + enhanced stats
+- Lint: PASS. tsc: 0 errors in src.
+- 9-tab Super Admin Portal: Dashboard | Users | Organizations | Plans | Subscriptions | Billing | API Keys | Audits | System
+- All tabs render correctly with KPI cards, tables (zebra-striped), charts (emerald gradient), filters, dropdowns, Sheets, and dialogs
+- VLM verified: Dashboard 9/10, Users 8/10, Organizations 9/10, Plans 8/10, Subscriptions 8/10, Billing 8/10, API Keys 8/10, Audits 8/10, System 8/10
+- Dev server running on :3000, dev.log clean.
+
+Phase 1 (Core Admin) COMPLETE. Next phases:
+- Phase 2 — Product Control: SEO Rules → Scoring → AEO → GEO → AI Models → AI Costs → Crawler → Reports
+- Phase 3 — Growth: Blog CMS → SEO CMS → Email Marketing → Leads → Coupons → Affiliates → Announcements
+- Phase 4 — Enterprise: White Label → Client Portal → Advanced API → Webhooks → Competitor Management → Advanced Analytics → Feature Flags
