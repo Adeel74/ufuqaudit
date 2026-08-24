@@ -1563,3 +1563,54 @@ Stage Summary:
 - Credentials: admin@ufuqaudit.app / admin123, demo@ufuqaudit.app / demo123
 - Lint: PASS. tsc: 0 errors in src.
 - Dev server running on :3000, dev.log clean.
+
+---
+Task ID: Visual-Preview + Extensions
+Agent: main (Z.ai Code)
+Task: Build website snapshot/visual preview with issue highlights, on-page SEO inspector, Firefox extension
+
+Work Log:
+- Created /api/page-snapshot (GET) — generates deterministic mock page screenshots as SVG:
+  - Full webpage layout mockup: browser chrome, header/nav, hero section, content blocks, footer
+  - Colored by URL hash (different sites get different color schemes)
+  - Returns page SEO metadata: title, meta description, H1, word count, load time, page size, canonical, robots, OG, schema, FAQ, viewport, lang, HTTPS, indexable, images count/alt, H2 count, internal/external links
+  - Returns highlight zones: areas on the screenshot where issues exist (missing viewport, missing lang, images no alt, thin content, missing schema, no HTTPS) with severity-colored bounding boxes
+- Created PagePreview component (page-preview.tsx):
+  - Renders the SVG page screenshot in a scrollable container
+  - Overlays colored highlight boxes on top of the screenshot (red=critical, amber=warning)
+  - Toggle "Show/Hide Issues" button
+  - Clickable highlights that focus/dim others
+  - SEO Metadata Inspector card: 12 metadata rows with pass/warn/fail status icons (title, meta desc, H1, canonical, robots, HTTPS, viewport, lang, OG, schema, FAQ, images alt)
+  - Stats row: word count, load time, page size, internal links
+  - Issue highlights list: clickable items that correspond to overlays on the screenshot
+- Created VisualPreviewView (visual-preview-view.tsx):
+  - Page selector dropdown (lists all pages from currentAudit)
+  - Renders PagePreview for the selected page
+  - Empty state if no audit
+- Added "Visual Preview" to sidebar (Eye icon, always-enabled)
+- Created Firefox extension variant (chrome-extension/firefox/manifest.json):
+  - Manifest V2 for Firefox compatibility (browser_action instead of action)
+  - browser_specific_settings for gecko ID
+  - Reuses same content script, popup, and background script
+- Updated Chrome Extension README with cross-browser install instructions
+
+Stage Summary:
+- Files created: 4 (page-snapshot API, page-preview component, visual-preview-view, firefox manifest)
+- Files modified: 3 (store.ts, sidebar.tsx, page.tsx)
+- Project stats: 33 views, 54 API routes, 16 Prisma models, 8 extension files
+- Lint: PASS. tsc: 0 errors in src.
+- Visual Preview verified via agent-browser + VLM:
+  - Page screenshot renders with colored issue highlight overlays ✓ (VLM 8/10)
+  - SEO metadata inspector shows 12 fields with pass/warn/fail icons ✓
+  - Issue highlights list with clickable items ✓
+  - "Show/Hide Issues" toggle works ✓
+- Dev server running on :3000, dev.log clean.
+
+Complete UfuqAudit ecosystem:
+1. UfuqAudit SaaS — 33 views, 26-tab admin portal, 54 API routes, 16 DB models
+2. UfuqLink — in-app link scanner + Chrome Extension (MV3) + Firefox Extension (MV2)
+3. Visual Preview — page screenshots with SEO issue overlays + metadata inspector
+4. Auth System — register/login/logout, sessions, RBAC (6 roles), cookie-based auth
+5. Public pages — landing, pricing, docs (9 sections), features, about, blog
+6. Chrome Extension — manifest.json, content scanner, popup, service worker
+7. Firefox Extension — MV2 variant for Firefox compatibility
