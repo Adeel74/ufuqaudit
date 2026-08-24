@@ -33,6 +33,7 @@ const ACTIONS: { id: string; label: string; hint: string; view?: ViewKey; icon: 
   { id: "go-ai-recos", label: "AI Recommendations", hint: "Generate AI fixes", view: "ai-recommendations", icon: "Sparkles", keywords: "fix generate ai" },
   { id: "go-ai-chat", label: "AI Chat", hint: "Ask the AI assistant", view: "ai-chat", icon: "Bot", keywords: "ask question chat" },
   { id: "go-tools", label: "SEO Tools", hint: "Generators + checkers", view: "tools", icon: "Wrench", keywords: "meta robots schema sitemap" },
+  { id: "go-ufuqlink", label: "UfuqLink", hint: "Instant link checker & SEO scan", view: "ufuqlink", icon: "Link", keywords: "link checker broken redirect scan ufuqlink" },
   { id: "go-keywords", label: "Keywords", hint: "Keyword rank tracker", view: "keywords", icon: "Search", keywords: "rank serp position" },
   { id: "go-backlinks", label: "Backlinks", hint: "Backlink monitor", view: "backlinks", icon: "Link2", keywords: "links domain authority" },
   { id: "go-content", label: "Content Analyzer", hint: "Readability + keyword density", view: "content", icon: "PenLine", keywords: "readability flesch words" },

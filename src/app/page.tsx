@@ -16,6 +16,7 @@ import { SecurityView } from "@/components/security/security-view";
 import { AiRecommendationsView } from "@/components/dashboard/ai-recommendations-view";
 import { AiChatView } from "@/components/dashboard/ai-chat-view";
 import { SeoToolsView } from "@/components/dashboard/seo-tools-view";
+import { UfuqLinkView } from "@/components/dashboard/ufuqlink-view";
 import { KeywordsView } from "@/components/dashboard/keywords-view";
 import { BacklinksView } from "@/components/dashboard/backlinks-view";
 import { ContentView } from "@/components/dashboard/content-view";
@@ -119,6 +120,7 @@ export default function Home() {
       case "ai-recommendations": return <AiRecommendationsView />;
       case "ai-chat": return <AiChatView />;
       case "tools": return <SeoToolsView />;
+      case "ufuqlink": return <UfuqLinkView />;
       case "keywords": return <KeywordsView />;
       case "backlinks": return <BacklinksView />;
       case "content": return <ContentView />;
@@ -159,7 +161,7 @@ export default function Home() {
         {/* Main content */}
         <main className="flex-1 min-w-0 overflow-x-hidden">
           <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-            {currentAudit || view === "admin" || view === "settings" || view === "billing" || view === "integrations" || view === "reports" || view === "history" || view === "competitors" || view === "ai-chat" || view === "tools" || view === "keywords" || view === "backlinks" || view === "content" || view === "link-graph" || view === "scheduled" || view === "portal" || view === "search-console" || view === "email" || view === "activity" || view === "api-docs" || view === "page-editor" || view === "crawl-settings" ? (
+            {currentAudit || view === "admin" || view === "settings" || view === "billing" || view === "integrations" || view === "reports" || view === "history" || view === "competitors" || view === "ai-chat" || view === "tools" || view === "ufuqlink" || view === "keywords" || view === "backlinks" || view === "content" || view === "link-graph" || view === "scheduled" || view === "portal" || view === "search-console" || view === "email" || view === "activity" || view === "api-docs" || view === "page-editor" || view === "crawl-settings" ? (
               renderView()
             ) : (
               <EmptyState onRun={() => setView("landing")} />

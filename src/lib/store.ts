@@ -37,6 +37,7 @@ export type ViewKey =
   | "features"
   | "about"
   | "blog-public"
+  | "ufuqlink"
   | "reports"
   | "admin"
   | "settings"
@@ -94,6 +95,7 @@ export const ADMIN_VIEWS: { key: ViewKey; label: string; icon: string }[] = [
   { key: "ai-recommendations", label: "AI Recommendations", icon: "Sparkles" },
   { key: "ai-chat", label: "AI Chat", icon: "Bot" },
   { key: "tools", label: "SEO Tools", icon: "Wrench" },
+  { key: "ufuqlink", label: "UfuqLink", icon: "Link" },
   { key: "keywords", label: "Keywords", icon: "Search" },
   { key: "backlinks", label: "Backlinks", icon: "Link2" },
   { key: "content", label: "Content", icon: "PenLine" },

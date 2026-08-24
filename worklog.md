@@ -1385,3 +1385,54 @@ Stage Summary:
 - Blog public page: 4 post cards with category badges
 - All verified via agent-browser + VLM (8-9/10 polish)
 - Dev server running on :3000, dev.log clean.
+
+---
+Task ID: UfuqLink
+Agent: main (Z.ai Code)
+Task: Build UfuqLink — in-app link scanner & SEO checker (Chrome Extension simulator)
+
+Work Log:
+- Created /api/scan-links (POST) — scans a URL, generates deterministic link data:
+  - 22 internal links (paths like /about, /services, /blog/seo-guide, etc.)
+  - 14 external links (google.com, youtube.com, etc.)
+  - 4 special links (mailto, tel, fragment, broken fragment)
+  - 1 insecure HTTP link
+  - Each link: status code (200/301/302/404/403/500), anchor text, rel attributes, redirect chains, issue detection
+  - Computes SEO score based on broken/redirect/generic-anchor/empty-anchor/insecure counts
+  - Returns links[], stats{total, broken, redirects, genericAnchors, emptyAnchors, insecure, issues, seoScore}
+- Created UfuqLinkView (src/components/dashboard/ufuqlink-view.tsx) — comprehensive link scanner dashboard:
+  - URL input with example chips + Scan Page button
+  - Loading state with spinner + "Extracting links, checking HTTP status..."
+  - Results overview: ScoreRing (SEO score), 6 StatCards (Total/Working/Broken/Redirects/Internal/External)
+  - Issues summary card: 4 colored boxes (Broken/Redirects/Anchor Issues/Insecure HTTP)
+  - Filter bar: search input + 7 filter pills (All/Broken/Redirects/Internal/External/Nofollow/Issues) + CSV export
+  - Links table (zebra-striped, max-h-60vh): Status badge (color-coded), URL (with redirect chain info), Type badge, Anchor text (with quality indicator), Rel badges (follow/nofollow/sponsored/ugc/noopener/noreferrer), Issue column
+  - Smart Recommendations card: numbered list with specific fix suggestions for broken links, redirects, anchor text, insecure links
+  - UfuqAudit CTA card: "Want a full website audit? Run Full Website Audit →" (lead-gen to UfuqAudit)
+  - Empty state: 4 feature cards (Broken Links, Redirect Chains, Anchor Analysis, SEO Checks)
+- Added UfuqLink to:
+  - store.ts (ViewKey "ufuqlink" + sidebar entry "UfuqLink" with Link icon)
+  - sidebar.tsx (Link icon import as LinkIcon to avoid conflict, always-enabled)
+  - page.tsx (routing: case "ufuqlink" → <UfuqLinkView />)
+  - command-palette.tsx (added "go-ufuqlink" action with keywords "link checker broken redirect scan")
+
+Stage Summary:
+- Files created: 2 (ufuqlink-view.tsx + scan-links API route)
+- Files modified: 4 (store.ts, sidebar.tsx, page.tsx, command-palette.tsx)
+- Lint: PASS. tsc: 0 errors in src.
+- UfuqLink verified end-to-end:
+  - Empty state with 4 feature cards ✓ (VLM 9/10)
+  - URL input + Scan button + example chips ✓
+  - Scan results: ScoreRing (47/100), 6 StatCards, issues summary ✓ (VLM 9/10)
+  - Link table: status badges, URL/type/anchor/rel/issue columns, redirect chain info ✓
+  - Filter pills: All/Broken/Redirects/Internal/External/Nofollow/Issues ✓
+  - CSV export ✓
+  - Smart Recommendations: 4 numbered fix suggestions ✓
+  - UfuqAudit CTA: "Run Full Website Audit" lead-gen ✓
+  - Command palette: searching "ufuqlink" finds and navigates to UfuqLink ✓
+- Dev server running on :3000, dev.log clean.
+
+UfuqLink MVP complete. The UfuqAudit ecosystem now includes:
+- UfuqAudit — full website audit SaaS (26-tab admin portal + 30+ user views)
+- UfuqLink — single-page link scanner (in-app Chrome Extension simulator)
+- Public pages: landing, pricing, docs (9 sections), features (18 cards), about, blog
