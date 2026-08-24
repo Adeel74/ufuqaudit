@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UfuqLink</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+        <span class="brand">UfuqLink</span>
+      </div>
+      <span class="tagline">Link & SEO Checker</span>
+    </div>
+
+    <!-- Scan Screen -->
+    <div id="scan-screen" class="screen">
+      <div class="url-display" id="current-url">Loading...</div>
+      <button id="scan-btn" class="btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        Scan This Page
+      </button>
+      <div class="last-scan" id="last-scan"></div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="screen hidden">
+      <div class="spinner"></div>
+      <p class="loading-text">Scanning links...</p>
+      <p class="loading-sub" id="loading-count"></p>
+    </div>
+
+    <!-- Results Screen -->
+    <div id="results-screen" class="screen hidden">
+      <div class="score-section">
+        <div class="score-ring" id="score-ring">
+          <svg width="80" height="80" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#e2e8f0" stroke-width="6"/>
+            <circle id="score-circle" cx="40" cy="40" r="34" fill="none" stroke="#10b981" stroke-width="6" stroke-dasharray="213.6" stroke-dashoffset="213.6" transform="rotate(-90 40 40)" stroke-linecap="round"/>
+          </svg>
+          <span class="score-value" id="score-value">0</span>
+        </div>
+        <span class="score-label">SEO Score</span>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-item stat-ok">
+          <span class="stat-num" id="stat-working">0</span>
+          <span class="stat-label">Working</span>
+        </div>
+        <div class="stat-item stat-redirect">
+          <span class="stat-num" id="stat-redirects">0</span>
+          <span class="stat-label">Redirects</span>
+        </div>
+        <div class="stat-item stat-broken">
+          <span class="stat-num" id="stat-broken">0</span>
+          <span class="stat-label">Broken</span>
+        </div>
+        <div class="stat-item stat-issue">
+          <span class="stat-num" id="stat-issues">0</span>
+          <span class="stat-label">Issues</span>
+        </div>
+      </div>
+
+      <div class="meta-grid">
+        <div class="meta-item"><span class="meta-label">Internal</span><span class="meta-value" id="stat-internal">0</span></div>
+        <div class="meta-item"><span class="meta-label">External</span><span class="meta-value" id="stat-external">0</span></div>
+        <div class="meta-item"><span class="meta-label">Nofollow</span><span class="meta-value" id="stat-nofollow">0</span></div>
+        <div class="meta-item"><span class="meta-label">Anchors</span><span class="meta-value" id="stat-anchors">0</span></div>
+      </div>
+
+      <div class="actions">
+        <button id="view-results-btn" class="btn-secondary">View Full Report</button>
+        <button id="export-btn" class="btn-outline">Export CSV</button>
+      </div>
+
+      <div class="cta-section">
+        <p class="cta-text">Want to audit your entire website?</p>
+        <button id="ufuqaudit-btn" class="btn-link">Run Full Website Audit →</button>
+      </div>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

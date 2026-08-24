@@ -1436,3 +1436,52 @@ UfuqLink MVP complete. The UfuqAudit ecosystem now includes:
 - UfuqAudit — full website audit SaaS (26-tab admin portal + 30+ user views)
 - UfuqLink — single-page link scanner (in-app Chrome Extension simulator)
 - Public pages: landing, pricing, docs (9 sections), features (18 cards), about, blog
+
+---
+Task ID: Chrome-Extension + Support + Extension Page
+Agent: main (Z.ai Code)
+Task: Build actual Chrome Extension files, extension download page, and support/ticket system
+
+Work Log:
+- Created Chrome Extension files in /chrome-extension/:
+  - manifest.json (Manifest V3 — permissions: activeTab, storage, notifications, <all_urls>)
+  - content/scanner.js — extracts all <a> tags, classifies internal/external/mailto/tel/fragment, detects rel attributes, anchor quality (good/generic/empty), broken fragment anchors, insecure HTTP links, duplicates, page SEO metadata (title, meta, canonical, robots, H1/H2 count, OG, Twitter Card, viewport, lang), image audit (missing/empty alt, HTTP images)
+  - popup/popup.html — 3-screen UI (scan → loading → results) with score ring, stat cards, meta grid, action buttons, UfuqAudit CTA
+  - popup/popup.css — clean emerald/teal popup styles matching UfuqAudit brand
+  - popup/popup.js — scan logic via chrome.tabs.sendMessage, animated score ring, CSV export, last scan storage, notifications, UfuqAudit escalation CTA
+  - background/service-worker.js — HTTP status checking via fetch() (HEAD/GET fallback), redirect tracking, onInstalled welcome page
+  - README.md — installation guide + architecture overview
+- Created Extension Download Page (extension-view.tsx):
+  - Hero card with download button + in-app scanner link
+  - 8 feature cards (Instant Scan, Broken Detection, Redirect Analysis, Anchor Analysis, SEO Checks, Internal/External, CSV Export, SEO Score)
+  - 5-step installation guide (Download → Open chrome://extensions → Enable Dev Mode → Load unpacked → Pin & Scan)
+  - UfuqAudit CTA: "Extension scans one page. UfuqAudit scans your entire website."
+- Created Support/Ticket System (support-view.tsx + /api/admin/tickets):
+  - 4 StatCards (Total, Open, Urgent, Resolved)
+  - Filter bar: search + status filter dropdown
+  - Zebra-striped tickets table: Subject, User, Priority badge, Status badge, Category, Updated time
+  - Ticket detail Sheet (slides from right): conversation thread with user/agent messages, reply input
+  - Create ticket dialog: subject, category select, priority select, message textarea
+  - API: 6 mock tickets with varied priorities/statuses/categories + message conversations
+- Added Extension + Support to:
+  - store.ts (extension + support ViewKeys + sidebar entries with Chrome + LifeBuoy icons)
+  - sidebar.tsx (Chrome + LifeBuoy icons, always-enabled)
+  - page.tsx (routing: case "extension" → <ExtensionView />, case "support" → <SupportView />)
+
+Stage Summary:
+- Files created: 9 (7 Chrome Extension files + extension-view.tsx + support-view.tsx) + 1 API route (tickets)
+- Files modified: 4 (store.ts, sidebar.tsx, page.tsx)
+- Lint: PASS. tsc: 0 errors in src.
+- Project stats: 32 view cases, 26 admin sections, 49 API routes, 7 Chrome Extension files
+- Extension page: VLM 9/10 (hero + features + install guide + CTA)
+- Support page: VLM 9/10 (stats + table + ticket detail Sheet + create dialog)
+- Ticket conversation view: chat-like thread with user/agent messages ✓
+- All verified via agent-browser — no console errors
+- Dev server running on :3000, dev.log clean.
+
+UfuqAudit ecosystem now includes:
+1. UfuqAudit SaaS — 32 views, 26-tab admin portal, 49 API routes
+2. UfuqLink — in-app link scanner + actual Chrome Extension (MV3)
+3. Support system — tickets + conversations
+4. Public pages — landing, pricing, docs (9 sections), features (18 cards), about, blog
+5. Extension download page with install guide
