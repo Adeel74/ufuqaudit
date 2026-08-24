@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useAppStore, ADMIN_VIEWS, type ViewKey } from "@/lib/store";
 import { LandingView } from "@/components/landing/landing-view";
+import { AuthView } from "@/components/auth/auth-view";
 import { AuditProgressView } from "@/components/landing/audit-progress";
 import { DashboardView } from "@/components/dashboard/dashboard-view";
 import { IssuesView } from "@/components/issues/issues-view";
@@ -62,6 +63,11 @@ const ICONS: Record<string, React.ComponentType<{ className?: string; size?: num
 export default function Home() {
   const { view, setView, currentAudit, user } = useAppStore();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+
+  // Auth views
+  if (view === "login" || view === "register") {
+    return <AuthView mode={view === "register" ? "register" : "login"} />;
+  }
 
   // Landing / audit-progress are full-bleed (no sidebar)
   if (view === "landing") {

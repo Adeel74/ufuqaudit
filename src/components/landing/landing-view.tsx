@@ -24,7 +24,7 @@ export function LandingView() {
       const res = await fetch("/api/auth/demo-admin", { method: "POST" });
       const data = await res.json();
       if (data?.admin) {
-        login(data.admin.email);
+        login(data.admin.email, data.admin.name, data.admin.role, data.admin.plan);
         toast.success(`Signed in as ${data.admin.name}`, {
           description: `${data.admin.email} · ${data.admin.plan.toUpperCase()} plan`,
         });

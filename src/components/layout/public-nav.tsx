@@ -57,10 +57,10 @@ export function PublicNav() {
 
           {/* Desktop CTAs */}
           <div className="hidden md:flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => go("landing")}>
+            <Button variant="ghost" size="sm" onClick={() => go("login")}>
               Sign in
             </Button>
-            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => go("landing")}>
+            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => go("register")}>
               <Sparkles className="w-3.5 h-3.5 mr-1" /> Get Started
             </Button>
           </div>
@@ -88,10 +88,10 @@ export function PublicNav() {
               </button>
             ))}
             <div className="flex gap-2 pt-2 px-3">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => go("landing")}>
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => go("login")}>
                 Sign in
               </Button>
-              <Button size="sm" className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => go("landing")}>
+              <Button size="sm" className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => go("register")}>
                 Get Started
               </Button>
             </div>

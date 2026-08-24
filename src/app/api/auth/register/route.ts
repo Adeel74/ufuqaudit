@@ -1,46 +1,46 @@
-// POST /api/auth/login — authenticate user and create session
+// POST /api/auth/register — create a new user account
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { verifyPassword, createSession } from "@/lib/auth";
+import { hashPassword, createSession } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { email, password } = body;
+    const { email, password, name } = body;
 
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
     }
-
-    const user = await db.user.findUnique({ where: { email: email.toLowerCase() } });
-    if (!user || !user.passwordHash) {
-      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    if (password.length < 8) {
+      return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
     }
 
-    if (user.status === "suspended") {
-      return NextResponse.json({ error: "Account suspended. Contact support." }, { status: 403 });
+    const existing = await db.user.findUnique({ where: { email: email.toLowerCase() } });
+    if (existing) {
+      return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 });
     }
 
-    if (!verifyPassword(password, user.passwordHash)) {
-      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
-    }
-
-    // Update last login
-    await db.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
+    const user = await db.user.create({
+      data: {
+        email: email.toLowerCase(),
+        name: name || email.split("@")[0],
+        passwordHash: hashPassword(password),
+        role: "user",
+        plan: "free",
+        status: "active",
+      },
     });
 
     const token = await createSession(user.id, req);
 
-    // Log login
+    // Log registration
     await db.auditLog.create({
       data: {
         userId: user.id,
-        action: "user.login",
+        action: "user.registered",
         entity: "user",
         entityId: user.id,
-        details: `User logged in: ${user.email}`,
+        details: `New user registered: ${user.email}`,
         ipAddress: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
       },
     }).catch(() => {});
@@ -52,21 +52,21 @@ export async function POST(req: NextRequest) {
         name: user.name,
         role: user.role,
         plan: user.plan,
-        status: user.status,
       },
       token,
     });
 
+    // Set cookie
     response.cookies.set("ufuq_session", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60,
+      maxAge: 7 * 24 * 60 * 60, // 7 days
       path: "/",
     });
 
     return response;
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message || "Login failed" }, { status: 500 });
+    return NextResponse.json({ error: err?.message || "Registration failed" }, { status: 500 });
   }
 }

@@ -1485,3 +1485,81 @@ UfuqAudit ecosystem now includes:
 3. Support system — tickets + conversations
 4. Public pages — landing, pricing, docs (9 sections), features (18 cards), about, blog
 5. Extension download page with install guide
+
+---
+Task ID: Auth-System
+Agent: main (Z.ai Code)
+Task: Build complete auth system — register/login/logout, sessions, RBAC roles, auth UI, enhanced Prisma schema
+
+Work Log:
+- Enhanced Prisma schema (12 → 16 models):
+  - Added Organization model (name, domain, industry, country, timezone, currency, branding, whiteLabel, status)
+  - Added TeamMember model (userId + organizationId + role: owner/admin/manager/editor/viewer)
+  - Added Session model (token, userAgent, ipAddress, expiresAt — 7-day sessions)
+  - Added ApiKey model (keyHash, keyPrefix, permissions, ipWhitelist, lastUsedAt, expiresAt, status)
+  - Added Notification model (type, title, description, read, userId)
+  - Enhanced User model: added status, avatar, bio, timezone, lastLoginAt, emailVerified, twoFactorEnabled
+  - Enhanced AuditLog: added ipAddress + user relation
+  - Enhanced Project: added organizationId relation
+  - Ran db:push + db:generate to sync schema + regenerate Prisma Client
+
+- Created auth library (src/lib/auth.ts):
+  - Password hashing: hashPassword() + verifyPassword() using Node crypto scryptSync (no bcrypt dependency)
+  - Session management: generateSessionToken(), createSession(), getSession(), deleteSession()
+  - getCurrentUser(): extracts token from Authorization header or cookie, returns user
+  - RBAC system: 6 roles (super_admin, admin, manager, editor, developer, user) with permission groups
+  - hasPermission(role, permission): wildcard matching (e.g. "users.*" matches "users.create")
+  - canAccessAdmin(role): checks if role is super_admin or admin
+  - createUser() + findUserByEmail() helpers
+
+- Created 6 auth API routes:
+  - POST /api/auth/register — creates user with hashed password, creates session, sets httpOnly cookie, logs registration
+  - POST /api/auth/login — verifies password, creates session, updates lastLoginAt, logs login, sets cookie
+  - POST /api/auth/logout — destroys session, clears cookie
+  - GET /api/auth/me — returns current authenticated user from session token
+  - GET /api/auth/roles — returns all 6 roles with permissions
+  - POST /api/auth/demo-admin — creates/updates admin@ufuqaudit.app as super_admin (for demo)
+
+- Updated Zustand store (src/lib/store.ts):
+  - Enhanced AuthUser interface: added id, status, token fields
+  - login() now accepts (email, name, role, plan, token) — full user data
+  - Added setUser() for programmatic auth state updates
+  - logout() now calls /api/auth/logout to destroy server session
+  - Added isAdmin() helper — checks role === super_admin || admin
+  - Added login + register ViewKeys
+
+- Created Auth UI (src/components/auth/auth-view.tsx):
+  - Dual-mode component (login/register) with toggle
+  - Email + Password inputs with icons + validation
+  - Register mode shows Full Name field
+  - Loading state with spinner
+  - "Continue as Demo Admin" button (calls /api/auth/demo-admin)
+  - Calls /api/auth/login or /api/auth/register, stores token, navigates to dashboard
+  - Features strip (200+ checks, Secure auth, 6 engines)
+  - "Back to home" link
+
+- Updated PublicNav: "Sign in" → navigates to login view, "Get Started" → navigates to register view
+- Updated landing-view.tsx: signInAsAdmin now uses login() with full user data (name, role, plan)
+- Updated page.tsx: added auth views routing (case "login" / "register" → <AuthView />)
+
+- Seeded admin users with passwords:
+  - admin@ufuqaudit.app / admin123 (role: super_admin, plan: agency)
+  - demo@ufuqaudit.app / demo123 (role: admin, plan: pro)
+
+- Verified end-to-end:
+  - Login API: POST /api/auth/login returns user + token ✓
+  - /api/auth/me: returns authenticated user from token ✓
+  - Browser: Sign in → login page → fill credentials → dashboard ✓
+  - Demo admin login works ✓
+  - Session token stored in httpOnly cookie ✓
+  - Lint: PASS, tsc: 0 errors
+
+Stage Summary:
+- Files created: 3 (auth.ts, auth-view.tsx, 6 API routes)
+- Files modified: 4 (schema.prisma, store.ts, page.tsx, public-nav.tsx, landing-view.tsx)
+- Prisma: 16 models (was 12) — added Organization, TeamMember, Session, ApiKey, Notification
+- Auth system: register, login, logout, session management, RBAC with 6 roles + wildcard permissions
+- API routes: 55 total (was 49 — added 6 auth routes)
+- Credentials: admin@ufuqaudit.app / admin123, demo@ufuqaudit.app / demo123
+- Lint: PASS. tsc: 0 errors in src.
+- Dev server running on :3000, dev.log clean.

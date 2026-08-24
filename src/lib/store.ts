@@ -9,6 +9,8 @@ export type ViewKey =
   | "landing"
   | "audit-progress"
   | "onboarding"
+  | "login"
+  | "register"
   | "dashboard"
   | "issues"
   | "pages"
@@ -47,14 +49,26 @@ export type ViewKey =
   | "integrations"
   | "pricing";
 
+interface AuthUser {
+  id?: string;
+  email: string;
+  name: string;
+  role: string; // super_admin | admin | manager | editor | developer | user
+  plan: string;
+  status?: string;
+  token?: string;
+}
+
 interface AppState {
   view: ViewKey;
   setView: (v: ViewKey) => void;
 
-  // auth (mocked client side for demo)
-  user: { email: string; name: string; role: "user" | "admin"; plan: string } | null;
-  login: (email: string) => void;
+  // auth
+  user: AuthUser | null;
+  login: (email: string, name?: string, role?: string, plan?: string, token?: string) => void;
+  setUser: (user: AuthUser | null) => void;
   logout: () => void;
+  isAdmin: () => boolean;
 
   // current audit
   currentAudit: AuditResult | null;
@@ -68,13 +82,32 @@ interface AppState {
   setSidebarOpen: (b: boolean) => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   view: "landing",
   setView: (v) => set({ view: v }),
 
+  // Start with demo user for seamless experience; real auth can override
   user: { email: "demo@ufuqaudit.app", name: "Demo User", role: "admin", plan: "pro" },
-  login: (email) => set({ user: { email, name: email.split("@")[0], role: "admin", plan: "pro" } }),
-  logout: () => set({ user: null, view: "landing" }),
+  login: (email, name, role, plan, token) =>
+    set({
+      user: {
+        email,
+        name: name || email.split("@")[0],
+        role: role || "user",
+        plan: plan || "free",
+        token,
+      },
+    }),
+  setUser: (user) => set({ user }),
+  logout: () => {
+    // Call logout API to destroy session
+    fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+    set({ user: null, view: "landing" });
+  },
+  isAdmin: () => {
+    const u = get().user;
+    return u?.role === "super_admin" || u?.role === "admin";
+  },
 
   currentAudit: null,
   setCurrentAudit: (a) => set({ currentAudit: a }),
