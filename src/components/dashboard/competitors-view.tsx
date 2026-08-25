@@ -16,7 +16,7 @@ import {
 } from "recharts";
 import {
   Swords, Play, Trophy, Star, Loader2, CheckCircle2, XCircle,
-  TrendingUp, TrendingDown, Lightbulb, RotateCw, Crown,
+  TrendingUp, TrendingDown, Lightbulb, RotateCw, Crown, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -92,6 +92,7 @@ export function CompetitorsView() {
     SITES_INITIAL.map((s) => ({ ...s, url: s.id === 0 ? (audit?.url ?? "") : "" })),
   );
   const [running, setRunning] = React.useState(false);
+  const [autoFinding, setAutoFinding] = React.useState(false);
   const [progress, setProgress] = React.useState<{ done: number; total: number; current: string } | null>(null);
 
   // Re-fill "Your site" when audit changes (e.g. first audit completes elsewhere).
@@ -348,6 +349,47 @@ export function CompetitorsView() {
               <>
                 <Play className="w-4 h-4 mr-1" /> Run comparison
               </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            disabled={running || !sites[0]?.url}
+            onClick={async () => {
+              const myUrl = normalizeUrl(sites[0]?.url || "");
+              if (!myUrl) { toast.error("Enter your site URL first"); return; }
+              setAutoFinding(true);
+              try {
+                const res = await fetch("/api/auto-competitors", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ url: myUrl }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data?.error || "Failed");
+                // Fill competitor URLs
+                setSites((prev) => {
+                  const updated = [...prev];
+                  data.competitors.forEach((comp: any, i: number) => {
+                    if (i + 1 < updated.length) {
+                      updated[i + 1] = { ...updated[i + 1], url: comp.url };
+                    }
+                  });
+                  return updated;
+                });
+                toast.success(`Found ${data.competitors.length} competitors!`, {
+                  description: data.suggestion,
+                });
+              } catch (e: any) {
+                toast.error(e?.message || "Auto-find failed");
+              } finally {
+                setAutoFinding(false);
+              }
+            }}
+          >
+            {autoFinding ? (
+              <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Finding…</>
+            ) : (
+              <><Sparkles className="w-4 h-4 mr-1" /> Auto-Find Competitors</>
             )}
           </Button>
           {progress && (

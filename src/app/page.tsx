@@ -20,6 +20,7 @@ import { AiChatView } from "@/components/dashboard/ai-chat-view";
 import { SeoToolsView } from "@/components/dashboard/seo-tools-view";
 import { UfuqLinkView } from "@/components/dashboard/ufuqlink-view";
 import { VisualPreviewView } from "@/components/dashboard/visual-preview-view";
+import { AllAuditsView, CompleteReportView } from "@/components/dashboard/all-audits-view";
 import { ExtensionView } from "@/components/dashboard/extension-view";
 import { SupportView } from "@/components/dashboard/support-view";
 import { KeywordsView } from "@/components/dashboard/keywords-view";
@@ -163,6 +164,8 @@ export default function Home() {
       case "tools": return <SeoToolsView />;
       case "ufuqlink": return <UfuqLinkView />;
       case "visual-preview": return <VisualPreviewView />;
+      case "all-audits": return <AllAuditsView />;
+      case "complete-report": return <CompleteReportView />;
       case "extension": return <ExtensionView />;
       case "support": return <SupportView />;
       case "keywords": return <KeywordsView />;
@@ -205,7 +208,7 @@ export default function Home() {
         {/* Main content */}
         <main className="flex-1 min-w-0 overflow-x-hidden">
           <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-            {currentAudit || view === "admin" || view === "settings" || view === "billing" || view === "integrations" || view === "reports" || view === "history" || view === "competitors" || view === "ai-chat" || view === "tools" || view === "ufuqlink" || view === "visual-preview" || view === "extension" || view === "support" || view === "keywords" || view === "backlinks" || view === "content" || view === "link-graph" || view === "scheduled" || view === "portal" || view === "search-console" || view === "email" || view === "activity" || view === "api-docs" || view === "page-editor" || view === "crawl-settings" ? (
+            {currentAudit || view === "admin" || view === "settings" || view === "billing" || view === "integrations" || view === "reports" || view === "history" || view === "competitors" || view === "ai-chat" || view === "tools" || view === "ufuqlink" || view === "visual-preview" || view === "all-audits" || view === "complete-report" || view === "extension" || view === "support" || view === "keywords" || view === "backlinks" || view === "content" || view === "link-graph" || view === "scheduled" || view === "portal" || view === "search-console" || view === "email" || view === "activity" || view === "api-docs" || view === "page-editor" || view === "crawl-settings" ? (
               renderView()
             ) : (
               <EmptyState onRun={() => setView("landing")} />
@@ -241,6 +244,8 @@ function AppShell() {
       case "tools": return <SeoToolsView />;
       case "ufuqlink": return <UfuqLinkView />;
       case "visual-preview": return <VisualPreviewView />;
+      case "all-audits": return <AllAuditsView />;
+      case "complete-report": return <CompleteReportView />;
       case "extension": return <ExtensionView />;
       case "support": return <SupportView />;
       case "keywords": return <KeywordsView />;
@@ -279,7 +284,7 @@ function AppShell() {
         )}
         <main className="flex-1 min-w-0 overflow-x-hidden">
           <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-            {currentAudit || view === "admin" || view === "settings" || view === "billing" || view === "integrations" || view === "reports" || view === "history" || view === "competitors" || view === "ai-chat" || view === "tools" || view === "ufuqlink" || view === "visual-preview" || view === "extension" || view === "support" || view === "keywords" || view === "backlinks" || view === "content" || view === "link-graph" || view === "scheduled" || view === "portal" || view === "search-console" || view === "email" || view === "activity" || view === "api-docs" || view === "page-editor" || view === "crawl-settings" ? (
+            {currentAudit || view === "admin" || view === "settings" || view === "billing" || view === "integrations" || view === "reports" || view === "history" || view === "competitors" || view === "ai-chat" || view === "tools" || view === "ufuqlink" || view === "visual-preview" || view === "all-audits" || view === "complete-report" || view === "extension" || view === "support" || view === "keywords" || view === "backlinks" || view === "content" || view === "link-graph" || view === "scheduled" || view === "portal" || view === "search-console" || view === "email" || view === "activity" || view === "api-docs" || view === "page-editor" || view === "crawl-settings" ? (
               renderView()
             ) : (
               <EmptyState onRun={() => setView("landing")} />
