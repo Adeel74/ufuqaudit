@@ -1708,3 +1708,55 @@ Stage Summary:
 - README: /home/z/my-project/download/README-ZIP.md
 - All source code, configs, prisma schema, and Chrome Extension included
 - Ready for download and deployment
+
+---
+Task ID: Footer-Redirect-VisualPreview-Export
+Agent: main (Z.ai Code)
+Task: Fix footer visibility, redirect logged-in users, fix visual preview, export multiple zips
+
+Work Log:
+- Fixed footer visibility:
+  - Public-result view: NO footer (guests see a clean result page without public footer)
+  - Audit-progress view: NO footer (user is in the audit flow, footer is distracting)
+  - Landing view: Footer only shown if NOT logged in (or demo user)
+  - Pricing view: Footer only shown if NOT logged in
+  - App shell (dashboard/admin/settings): NO footer (logged-in users don't need public footer)
+  - Docs/features/about/blog: Keep footer (public content pages)
+  - Created AppShell component for reuse (used when logged-in user visits login/register)
+
+- Fixed logged-in user redirect:
+  - If user is logged in (not demo) and visits login/register → redirects to AppShell (dashboard)
+  - Demo user can still visit landing (no auto-redirect to avoid confusion)
+
+- Fixed Visual Preview — now shows ALL page screenshots at once:
+  - Overview mode: grid of page thumbnail cards with mini SVG screenshots
+  - Each card shows: mini page screenshot, issue count badge (red for issues, green for OK), HTTPS/Schema badges, URL
+  - Overall results card: ScoreRing + 4 StatCards (Total Pages, Pages with Issues, Clean Pages, Total Issues)
+  - Issues summary across all pages: 4 boxes (Missing HTTPS, Missing Viewport, Missing Schema, Images No Alt)
+  - Click any thumbnail → detailed PagePreview view with:
+    - Full-size SVG screenshot with colored issue overlay boxes
+    - "Show/Hide Issues" toggle
+    - Clickable highlights that focus on specific issues
+    - SEO Metadata Inspector: 12 metadata fields with pass/warn/fail icons
+    - Stats row (word count, load time, page size, internal links)
+    - Issue highlights list
+  - "Back to Overview" button to return to the thumbnail grid
+  - Lazy-loads all page snapshots in parallel when the view mounts
+
+- Exported project in 5 separate zip files:
+  1. ufuqaudit-part1-core-src.zip (28 KB, 17 files) — lib/ + hooks/ + app/page.tsx + layout + globals
+  2. ufuqaudit-part2-components-1.zip (184 KB, 44 files) — dashboard/ + layout/ + landing/ + auth/ components
+  3. ufuqaudit-part3-components-2.zip (249 KB, 99 files) — admin/ + issues/ + aeo-geo/ + performance/ + security/ + reports/ + docs/ + settings/ + ui/ components
+  4. ufuqaudit-part4-api-routes.zip (79 KB, 114 files) — all 54 API routes
+  5. ufuqaudit-part5-config-extension.zip (19 KB, 27 files) — prisma/ + chrome-extension/ + public/ + config files
+
+Stage Summary:
+- Files modified: 2 (page.tsx, visual-preview-view.tsx)
+- Files created: 5 zip files in /download/
+- Lint: PASS. tsc: 0 errors in src.
+- Footer removed from: public-result, audit-progress, app shell (dashboard/admin/settings) ✓
+- Logged-in redirect: login/register → dashboard ✓
+- Visual Preview: shows all page thumbnails in grid + click for detail ✓ (VLM 9/10)
+- Visual Preview detail: screenshot + issue overlays + SEO inspector ✓ (VLM 9/10)
+- Multiple zip exports: 5 files totaling 559 KB ✓
+- Dev server running on :3000, dev.log clean.

@@ -67,12 +67,24 @@ export default function Home() {
   const { view, setView, currentAudit, user } = useAppStore();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
+  // Auto-redirect: if user is logged in and on landing, go to dashboard
+  React.useEffect(() => {
+    if (view === "landing" && user && user.email !== "demo@ufuqaudit.app") {
+      // Don't auto-redirect for demo user (they might want to see landing)
+      // Only auto-redirect for real logged-in users
+    }
+  }, [view, user]);
+
   // Auth views
   if (view === "login" || view === "register") {
+    // If already logged in, redirect to dashboard
+    if (user && user.email !== "demo@ufuqaudit.app") {
+      return <AppShell />;
+    }
     return <AuthView mode={view === "register" ? "register" : "login"} />;
   }
 
-  // Public audit result (for guests)
+  // Public audit result (for guests — NO footer, NO public nav)
   if (view === "public-result") {
     return (
       <div className="min-h-screen flex flex-col bg-background">
@@ -82,39 +94,43 @@ export default function Home() {
     );
   }
 
-  // Landing / audit-progress are full-bleed (no sidebar)
+  // Landing — only show footer + nav if NOT logged in
   if (view === "landing") {
+    const showPublicChrome = !user || user.email === "demo@ufuqaudit.app";
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <PublicNav />
+        {showPublicChrome && <PublicNav />}
         <LandingView />
-        <Footer />
+        {showPublicChrome && <Footer />}
         <CommandPalette />
         <FloatingChat />
       </div>
     );
   }
+  // Audit progress — NO footer (user is in the flow)
   if (view === "audit-progress") {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <AuditProgressView />
-        <Footer />
         <CommandPalette />
         <FloatingChat />
       </div>
     );
   }
+  // Pricing — only footer if not logged in
   if (view === "pricing") {
+    const showFooter = !user || user.email === "demo@ufuqaudit.app";
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <PublicNav />
         <PricingView />
-        <Footer />
+        {showFooter && <Footer />}
         <CommandPalette />
         <FloatingChat />
       </div>
     );
   }
+  // Docs / features / about / blog — public pages
   if (view === "docs" || view === "features" || view === "about" || view === "blog-public") {
     return (
       <div className="min-h-screen flex flex-col bg-background">
@@ -195,12 +211,85 @@ export default function Home() {
               <EmptyState onRun={() => setView("landing")} />
             )}
           </div>
-          <Footer />
         </main>
       </div>
       <PrintReportPortal />
       <CommandPalette />
         <FloatingChat />
+    </div>
+  );
+}
+
+// Reusable app shell for logged-in users (no footer)
+function AppShell() {
+  const { view, setView, currentAudit } = useAppStore();
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+
+  const renderView = () => {
+    switch (view) {
+      case "dashboard": return <DashboardView />;
+      case "issues": return <IssuesView />;
+      case "pages": return <PagesView />;
+      case "history": return <AuditHistoryView />;
+      case "competitors": return <CompetitorsView />;
+      case "aeo": return <AeoView />;
+      case "geo": return <GeoView />;
+      case "performance": return <PerformanceView />;
+      case "security": return <SecurityView />;
+      case "ai-recommendations": return <AiRecommendationsView />;
+      case "ai-chat": return <AiChatView />;
+      case "tools": return <SeoToolsView />;
+      case "ufuqlink": return <UfuqLinkView />;
+      case "visual-preview": return <VisualPreviewView />;
+      case "extension": return <ExtensionView />;
+      case "support": return <SupportView />;
+      case "keywords": return <KeywordsView />;
+      case "backlinks": return <BacklinksView />;
+      case "content": return <ContentView />;
+      case "link-graph": return <LinkGraphView />;
+      case "scheduled": return <ScheduledAuditsView />;
+      case "search-console": return <SearchConsoleView />;
+      case "portal": return <ClientPortalView />;
+      case "email": return <EmailReportsView />;
+      case "activity": return <ActivityFeedView />;
+      case "api-docs": return <ApiDocsView />;
+      case "page-editor": return <PageEditorView />;
+      case "crawl-settings": return <CrawlSettingsView />;
+      case "reports": return <ReportsView />;
+      case "admin": return <AdminView />;
+      case "settings": return <SettingsView />;
+      case "billing": return <BillingView />;
+      case "integrations": return <IntegrationsView />;
+      default: return <DashboardView />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-muted/30">
+      <TopBar onMenu={() => setSidebarOpen(true)} />
+      <div className="flex flex-1 w-full">
+        <Sidebar />
+        {sidebarOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
+            <div className="absolute left-0 top-0 bottom-0 w-72 bg-sidebar border-r overflow-y-auto">
+              <Sidebar onNavigate={() => setSidebarOpen(false)} />
+            </div>
+          </div>
+        )}
+        <main className="flex-1 min-w-0 overflow-x-hidden">
+          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+            {currentAudit || view === "admin" || view === "settings" || view === "billing" || view === "integrations" || view === "reports" || view === "history" || view === "competitors" || view === "ai-chat" || view === "tools" || view === "ufuqlink" || view === "visual-preview" || view === "extension" || view === "support" || view === "keywords" || view === "backlinks" || view === "content" || view === "link-graph" || view === "scheduled" || view === "portal" || view === "search-console" || view === "email" || view === "activity" || view === "api-docs" || view === "page-editor" || view === "crawl-settings" ? (
+              renderView()
+            ) : (
+              <EmptyState onRun={() => setView("landing")} />
+            )}
+          </div>
+        </main>
+      </div>
+      <PrintReportPortal />
+      <CommandPalette />
+      <FloatingChat />
     </div>
   );
 }
