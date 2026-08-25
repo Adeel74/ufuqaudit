@@ -11,6 +11,7 @@ export type ViewKey =
   | "onboarding"
   | "login"
   | "register"
+  | "public-result"
   | "dashboard"
   | "issues"
   | "pages"

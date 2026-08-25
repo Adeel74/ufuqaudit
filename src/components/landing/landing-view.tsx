@@ -14,7 +14,7 @@ import { ScoreRing } from "@/components/dashboard/score-ui";
 import { OnboardingWizard } from "@/components/landing/onboarding-wizard";
 
 export function LandingView() {
-  const { setView, setCurrentAudit, login } = useAppStore();
+  const { setView, setCurrentAudit, login, user } = useAppStore();
   const [url, setUrl] = React.useState("");
   const [running, setRunning] = React.useState(false);
   const [onboardingOpen, setOnboardingOpen] = React.useState(false);
@@ -52,7 +52,12 @@ export function LandingView() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Audit failed");
       setCurrentAudit(data);
-      setView("dashboard");
+      // If user is logged in (has real auth), go to dashboard. Otherwise show public results.
+      if (user && user.email !== "demo@ufuqaudit.app") {
+        setView("dashboard");
+      } else {
+        setView("public-result");
+      }
       toast.success(`Audit complete — Ufuq Score ${data.overallScore}/100`);
     } catch (err: any) {
       toast.error(err?.message || "Audit failed");

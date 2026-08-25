@@ -4,6 +4,7 @@ import * as React from "react";
 import { useAppStore, ADMIN_VIEWS, type ViewKey } from "@/lib/store";
 import { LandingView } from "@/components/landing/landing-view";
 import { AuthView } from "@/components/auth/auth-view";
+import { PublicResultView } from "@/components/landing/public-result-view";
 import { AuditProgressView } from "@/components/landing/audit-progress";
 import { DashboardView } from "@/components/dashboard/dashboard-view";
 import { IssuesView } from "@/components/issues/issues-view";
@@ -47,6 +48,7 @@ import { TopBar } from "@/components/layout/topbar";
 import { Footer } from "@/components/layout/footer";
 import { PrintReportPortal } from "@/components/reports/print-portal";
 import { CommandPalette } from "@/components/layout/command-palette";
+import { FloatingChat } from "@/components/layout/floating-chat";
 import {
   LayoutDashboard, ListChecks, FileText, MessageSquare, Brain, Gauge,
   Shield, Sparkles, FileBarChart, Plug, CreditCard, Settings as SettingsIcon,
@@ -70,6 +72,16 @@ export default function Home() {
     return <AuthView mode={view === "register" ? "register" : "login"} />;
   }
 
+  // Public audit result (for guests)
+  if (view === "public-result") {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <PublicResultView />
+        <FloatingChat />
+      </div>
+    );
+  }
+
   // Landing / audit-progress are full-bleed (no sidebar)
   if (view === "landing") {
     return (
@@ -78,6 +90,7 @@ export default function Home() {
         <LandingView />
         <Footer />
         <CommandPalette />
+        <FloatingChat />
       </div>
     );
   }
@@ -87,6 +100,7 @@ export default function Home() {
         <AuditProgressView />
         <Footer />
         <CommandPalette />
+        <FloatingChat />
       </div>
     );
   }
@@ -97,6 +111,7 @@ export default function Home() {
         <PricingView />
         <Footer />
         <CommandPalette />
+        <FloatingChat />
       </div>
     );
   }
@@ -110,6 +125,7 @@ export default function Home() {
         {view === "blog-public" && <BlogPublicPage />}
         <Footer />
         <CommandPalette />
+        <FloatingChat />
       </div>
     );
   }
@@ -184,6 +200,7 @@ export default function Home() {
       </div>
       <PrintReportPortal />
       <CommandPalette />
+        <FloatingChat />
     </div>
   );
 }

@@ -1614,3 +1614,63 @@ Complete UfuqAudit ecosystem:
 5. Public pages — landing, pricing, docs (9 sections), features, about, blog
 6. Chrome Extension — manifest.json, content scanner, popup, service worker
 7. Firefox Extension — MV2 variant for Firefox compatibility
+
+---
+Task ID: Floating-Chat + Guest-Flow + Admin/User-Dashboard-Differentiation
+Agent: main (Z.ai Code)
+Task: Build floating AI chat widget, fix guest audit flow, differentiate admin vs user dashboards
+
+Work Log:
+- Created FloatingChat component (src/components/layout/floating-chat.tsx):
+  - Floating button (bottom-right, emerald gradient, with notification badge)
+  - Opens a 400×560px chat panel with:
+    - Header: AI Assistant avatar + online status + close button
+    - Messages area: user messages (right, emerald) + AI messages (left, muted) with auto-scroll
+    - Loading indicator: 3 bouncing emerald dots
+    - Context-aware greeting: detects if currentAudit exists, mentions URL + score
+    - Suggested prompts: contextual based on current view (dashboard/issues/aeo/geo/performance/security) or generic SEO questions
+    - Input bar: text input + Send button (emerald, disabled when empty/loading)
+    - Calls POST /api/ai/chat with audit context (auditId + url) for grounded responses
+  - Hidden on login/register pages
+  - Added to ALL views (landing, pricing, docs, app shell, public-result)
+
+- Fixed Guest Audit Flow:
+  - LandingView.runAudit() now checks if user is logged in (user.email !== "demo@ufuqaudit.app")
+  - If logged in → goes to "dashboard" (personal audit view)
+  - If guest → goes to "public-result" (limited public result page with signup CTA)
+  - Created PublicResultView (src/components/landing/public-result-view.tsx):
+    - Score hero: ScoreRing with overall score + URL
+    - Category scores: 6 ScoreBars (all visible to guests)
+    - Issue summary: 4 severity count boxes (visible to guests)
+    - Top issues: first 5 critical/error issues (visible)
+    - Blurred remaining issues: issues 6-10 shown blurred with "Unlock Full Report" overlay
+    - AI Action Plan preview: first 2 items visible, rest locked
+    - Full-width green CTA card: "Get the full picture — Create Free Account"
+    - "Sign In" secondary button
+    - "No credit card required · 50 URLs free · Cancel anytime"
+
+- Differentiated Admin vs User Dashboards:
+  - DashboardView now checks user role:
+    - If user.role === "super_admin" or "admin" AND no current audit → shows AdminOverviewDashboard
+    - Otherwise → shows the standard Website Health dashboard (personal audit)
+  - AdminOverviewDashboard component (inline in dashboard-view.tsx):
+    - Header: "Platform Overview" with "Admin Portal" button
+    - Greeting card: time-based greeting + platform summary text
+    - KPI grid: Total Users, Total Audits, Monthly Revenue, Active Subscriptions (from /api/admin/stats)
+    - Quick actions: 4 cards linking to Admin Portal sections (Manage Users, View Plans, Audit Rules, AI Models)
+    - Recent audits list: latest 6 audits with score badges + URL + user email
+    - System status: 4 green status indicators (Application, Database, AI Service, API)
+  - This means admins see a platform overview while regular users see their personal audit dashboard
+
+- Added "public-result" to ViewKey in store.ts
+- Wired PublicResultView + FloatingChat into page.tsx routing (on all views)
+
+Stage Summary:
+- Files created: 3 (floating-chat.tsx, public-result-view.tsx, updated dashboard-view.tsx)
+- Files modified: 3 (store.ts, page.tsx, landing-view.tsx)
+- Lint: PASS. tsc: 0 errors in src. No console errors.
+- Guest flow verified: run audit → public result page with blurred issues + signup CTA ✓ (VLM 8/10)
+- Floating chat verified: opens with greeting, sends message, AI responds with audit context ✓ (VLM 9/10)
+- Admin dashboard verified: shows platform overview with users/revenue/audits KPIs ✓ (VLM 9/10)
+- User dashboard verified: shows personal audit empty state (not platform overview) ✓ (VLM 8/10)
+- Dev server running on :3000, dev.log clean.
