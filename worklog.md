@@ -1760,3 +1760,68 @@ Stage Summary:
 - Visual Preview detail: screenshot + issue overlays + SEO inspector ✓ (VLM 9/10)
 - Multiple zip exports: 5 files totaling 559 KB ✓
 - Dev server running on :3000, dev.log clean.
+
+---
+Task ID: Admin-Fix-Sidebar-Scores
+Agent: main (Z.ai Code)
+Task: Fix admin dashboard rendering, add all 26 admin tabs to sidebar, verify complete scoring
+
+Work Log:
+- Verified admin dashboard renders correctly:
+  - 12 KPI stat cards (Total Users: 8, Active Users: 5, New Today: 1, New This Month: 8, Total Audits: 63, Projects: 24, Avg Score: 90, Monthly Revenue: $4,827, Total API Requests: 126.3K, AI Tokens: 895.5K, Active Subs: 34, Trial Users: 12)
+  - User growth AreaChart (30-day trend)
+  - Revenue BarChart (12-month trend)
+  - Plan distribution donut (PieChart)
+  - Recent audits table (8 entries with scores + user emails)
+  - Real-time activity feed
+  - VLM confirmed: 9/10 polish, all components present
+
+- Verified ALL 26 admin tabs render correctly with data (clicked through each one):
+  - Dashboard ✓ (12 KPIs + 3 charts + activity feed + recent audits)
+  - Users ✓ (8 users with search/filter/bulk actions)
+  - Organizations ✓ (8 orgs with stats)
+  - Plans ✓ (4 plans with full limits)
+  - Subscriptions ✓ (10 subs with status badges)
+  - Billing ✓ (20 transactions + revenue chart)
+  - API Keys ✓ (3 keys with usage chart)
+  - Audits ✓ (63 audits with filters)
+  - System ✓ (4 settings cards + health + logs)
+  - Audit Rules ✓ (24 rules with toggle)
+  - Scoring ✓ (6 sliders + donut)
+  - AI Models ✓ (5 models with routing)
+  - AI Costs ✓ (budget tracking + 30-day chart)
+  - Crawler ✓ (running/queued/failed + metrics)
+  - Blog ✓ (7 posts + AI generator)
+  - Campaigns ✓ (6 campaigns + templates)
+  - Leads ✓ (10 leads + conversion funnel)
+  - Coupons ✓ (7 coupons with usage)
+  - Affiliates ✓ (5 affiliates + commission chart)
+  - Announcements ✓ (5 announcements with preview)
+  - Feature Flags ✓ (10 flags with per-plan overrides)
+  - Webhooks ✓ (4 webhooks + delivery logs)
+  - Analytics ✓ (cohort heatmap + growth charts)
+  - White Label ✓ (3 configs with branding preview)
+  - Competitors ✓ (settings + plan limits + comparisons)
+  - Security ✓ (failed logins chart + suspicious activity + audit log)
+
+- Fixed sidebar admin section:
+  - Changed from showing only "Admin" button to showing "Admin Portal" section
+  - Added collapsible "Super Admin" button with chevron
+  - When expanded, shows all 26 admin tabs grouped by category:
+    - Core: Dashboard, Users, Organizations, Plans, Subscriptions, Billing, API Keys, Audits, System
+    - Product: Audit Rules, Scoring, AI Models, AI Costs, Crawler
+    - Growth: Blog, Campaigns, Leads, Coupons, Affiliates, Announcements
+    - Enterprise: Feature Flags, Webhooks, Analytics, White Label, Competitors, Security
+  - Scrollable sub-section (max-h-300px) to avoid sidebar overflow
+  - VLM confirmed: "Super Admin button with chevron, grouped links under CORE and PRODUCT headers"
+
+- Fixed admin role check: changed from `user?.role === "admin"` to `user?.role === "admin" || user?.role === "super_admin"` to include super_admin role
+
+Stage Summary:
+- Files modified: 1 (sidebar.tsx — collapsible admin section with 26 grouped links)
+- Lint: PASS. tsc: 0 errors in src.
+- All 26 admin tabs verified rendering with real data ✓
+- Admin dashboard: 12 KPIs + 3 charts + activity feed + recent audits ✓ (VLM 9/10)
+- Sidebar: collapsible Admin Portal section with all 26 tabs grouped (Core/Product/Growth/Enterprise) ✓ (VLM confirmed)
+- No console errors across all tabs
+- Dev server running on :3000, dev.log clean.

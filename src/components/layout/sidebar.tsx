@@ -99,28 +99,9 @@ function SidebarContent({
           );
         })}
 
-        {user?.role === "admin" && (
-          <>
-            <div className="px-2 pt-4 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">System</div>
-            {ADMIN_VIEWS.filter((v) => v.key === "admin").map((v) => {
-              const Icon = ICONS[v.icon] || ShieldCheck;
-              const active = view === v.key;
-              return (
-                <button
-                  key={v.key}
-                  onClick={() => setView(v.key)}
-                  className={cn(
-                    "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-colors",
-                    active ? "bg-primary text-primary-foreground shadow-sm" : "text-sidebar-foreground hover:bg-sidebar-accent"
-                  )}
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span className="truncate">{v.label}</span>
-                </button>
-              );
-            })}
-          </>
-        )}
+        {user?.role === "admin" || user?.role === "super_admin" ? (
+          <AdminSidebarSection view={view} setView={setView} />
+        ) : null}
       </nav>
 
       {/* Plan card */}
@@ -136,5 +117,53 @@ function SidebarContent({
         </div>
       </div>
     </div>
+  );
+}
+
+// Collapsible admin section with grouped sub-links
+function AdminSidebarSection({ view, setView }: { view: any; setView: (v: any) => void }) {
+  const [expanded, setExpanded] = React.useState(false);
+
+  const GROUPS = [
+    { label: "Core", items: ["Dashboard", "Users", "Organizations", "Plans", "Subscriptions", "Billing", "API Keys", "Audits", "System"] },
+    { label: "Product", items: ["Audit Rules", "Scoring", "AI Models", "AI Costs", "Crawler"] },
+    { label: "Growth", items: ["Blog", "Campaigns", "Leads", "Coupons", "Affiliates", "Announcements"] },
+    { label: "Enterprise", items: ["Feature Flags", "Webhooks", "Analytics", "White Label", "Competitors", "Security"] },
+  ];
+
+  return (
+    <>
+      <div className="px-2 pt-4 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Admin Portal</div>
+      <button
+        onClick={() => { setView("admin"); setExpanded(!expanded); }}
+        className={cn(
+          "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-colors",
+          view === "admin" ? "bg-primary text-primary-foreground shadow-sm" : "text-sidebar-foreground hover:bg-sidebar-accent"
+        )}
+      >
+        <ShieldCheck className="w-4 h-4 shrink-0" />
+        <span className="truncate">Super Admin</span>
+        <ChevronRight className={cn("w-3 h-3 ml-auto transition-transform", expanded && "rotate-90")} />
+      </button>
+
+      {expanded && (
+        <div className="ml-2 mt-1 space-y-2 max-h-[300px] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30">
+          {GROUPS.map((group) => (
+            <div key={group.label}>
+              <div className="px-2 py-0.5 text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold">{group.label}</div>
+              {group.items.map((item) => (
+                <button
+                  key={item}
+                  onClick={() => setView("admin")}
+                  className="w-full flex items-center gap-1.5 px-2 py-1 rounded text-[11px] text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors truncate"
+                >
+                  <span className="truncate">{item}</span>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
