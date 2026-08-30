@@ -10,7 +10,11 @@
     "db:push": "prisma db push --accept-data-loss",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:reset": "prisma migrate reset"
+    "db:reset": "prisma migrate reset --force",
+    "build:prod": "next build",
+    "start:prod": "NODE_ENV=production next start -p 3000",
+    "db:studio": "prisma studio",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
